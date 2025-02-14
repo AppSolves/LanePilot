@@ -1,0 +1,15 @@
+## Custom License - QuickClipAI
+
+**All Rights Reserved**
+
+Copyright (c) 2024 Kaan Gönüldinc
+
+Permission is hereby **NOT** granted, explicitly or implicitly, to any person or organization to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, or to permit persons to whom the Software is furnished to do so, unless written permission is given by the copyright holder.
+
+Any use of the Software without explicit permission is strictly prohibited and may be punishable by law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+For any inquiries, please contact business-inquiries@appsolves.dev.

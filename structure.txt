@@ -1,0 +1,41 @@
+/autonomous-traffic-sim
+│── /src
+│   ├── /ai                      # AI-related code (model training, inference, etc.)
+│   │   ├── /training            # Model training scripts & dataset management
+│   │   ├── /models              # Saved & exported AI models (PyTorch, TensorRT, etc.)
+│   │   ├── /inference           # AI inference scripts for real-time execution on Jetson
+│   │   ├── config.py            # Configurations for AI models (paths, hyperparams, etc.)
+│   │   ├── dataset_loader.py    # Handles dataset loading & preprocessing
+│   │   ├── train.py             # Main AI training script
+│   │   ├── inference.py         # Loads & runs the trained model
+│   │
+│   ├── /jetson                  # Code running on the Jetson Orin Nano
+│   │   ├── firmware             # (optional) Compiled binaries if needed
+│   │   ├── requirements.txt     # Dependencies for Jetson
+│   │   ├── run_inference.py     # Main AI execution script for Jetson
+│   │   ├── jetson_utils.py      # Hardware-specific utilities (e.g. TensorRT inference)
+│   │
+│   ├── /raspberry_pi            # Code for Raspberry Pi (sensor handling, motor control)
+│   │   ├── firmware             # Compiled firmware if needed
+│   │   ├── requirements.txt     # Dependencies for Raspberry Pi
+│   │   ├── motor_control.py     # Motor driver for autonomous vehicles
+│   │   ├── sensor_processing.py # Sensor data collection & processing
+│   │
+│   ├── /common                  # Shared utilities (logging, config parsing, etc.)
+│   │   ├── logger.py            # Custom logging module
+│   │   ├── config.yaml          # Centralized config file
+│   │
+│── /assets                      # Non-code assets (datasets, models, maps, etc.)
+│   ├── /datasets                # Collected training data
+│   ├── /trained_models          # Exported trained models (ONNX, TensorRT)
+│   ├── /maps                    # Map data for simulation/testing
+│   ├── /logs                    # Training & runtime logs
+│
+│── /docs                        # Documentation
+│── /scripts                     # Helper scripts (installation, setup, etc.)
+│── README.md                    # Project overview & setup instructions
+│── requirements.txt              # Global dependencies
+│── LICENSE                       # License information
+│── CONTRIBUTING.md               # Guidelines for contributing to the project
+│── CHANGELOG.md                  # Version history & changelog
+│── .gitignore                    # Files & directories to ignore in version control

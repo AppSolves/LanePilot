@@ -1,0 +1,12 @@
+.venv
+.vscode
+**/__pycache__/
+
+*.pyc
+*.log
+*.env
+**/config.json
+**/client_secrets.json
+build/
+output/
+logs/
