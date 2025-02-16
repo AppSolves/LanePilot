@@ -7,6 +7,7 @@
 *.env
 **/config.json
 **/client_secrets.json
+assets/github/local/
 build/
 output/
 logs/
