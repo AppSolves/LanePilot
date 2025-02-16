@@ -3,7 +3,7 @@ import logging
 import logging.handlers
 import os
 
-from common.utils import PROJECT_NAME, Singleton
+from src.common.utils import PROJECT_NAME, Singleton
 
 
 @Singleton
