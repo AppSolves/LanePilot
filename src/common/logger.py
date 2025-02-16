@@ -1,15 +1,24 @@
+# src/common/logger.py
 import logging
 import logging.handlers
 import os
 
-from src.common.helpers import PROJECT_NAME, Singleton
+from common.utils import PROJECT_NAME, Singleton
 
 
 @Singleton
 class Logger(logging.Logger):
+    """General logger class for this project."""
+
     def __init__(
         self, level: int = logging.DEBUG, create_log_file: bool = True
     ) -> None:
+        """Initialize the logger.
+
+        Args:
+            level (int, optional): The logging level. Defaults to logging.DEBUG.
+            create_log_file (bool, optional): Whether to create a log file and store it on your drive. Defaults to True.
+        """
         super().__init__(PROJECT_NAME, level)
         self.addHandler(logging.StreamHandler())
         if create_log_file:

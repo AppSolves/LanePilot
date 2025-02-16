@@ -1,40 +1,32 @@
+<style>
+    .image-placeholder {
+        background: url('./assets/github/mockup.png') center/cover no-repeat;
+        border-radius: 25px;
+        width: 100%;
+        min-height: 50vw;
+        height: auto;
+    }
+</style>
+
 <div align="center">
 
-<img src="./assets/github/readme-anim.gif" alt="readmeanim" width="400" height="400"/>
+<img src="./assets/github/mockup.gif" alt="LanePilot" class="image-placeholder" />
 
------
+# `LanePilot 🚗`
 
-Check out these examples of videos generated using `QuickClipAI` (by [CurioBurstz](https://www.youtube.com/@curioburstz?sub_confirmation=1)):
+![GitHub stars](https://img.shields.io/github/stars/AppSolves/QuickClipAI) ![GitHub forks](https://img.shields.io/github/forks/AppSolves/QuickClipAI) ![GitHub issues](https://img.shields.io/github/issues/AppSolves/QuickClipAI) ![GitHub license](https://img.shields.io/github/license/AppSolves/QuickClipAI)
 
-<a href="http://www.youtube.com/watch?v=p9FsprPymo4" title="Why You Feel Pain: The Fascinating Science Behind Your Body's Alarm System">
-  <img src="http://img.youtube.com/vi/p9FsprPymo4/0.jpg" alt="CurioBurstz No. 1" width="300" height="225" hspace="25">
-</a>
-<a href="http://www.youtube.com/watch?v=1ObvKfjU0Vg" title="The Mystery of Déjà Vu: Unraveling the Mind's Glitch">
-  <img src="http://img.youtube.com/vi/1ObvKfjU0Vg/0.jpg" alt="CurioBurstz No. 2" width="300" height="225">
-</a>
-
------
-
-# `QuickClipAI`
-
-![GitHub stars](https://img.shields.io/github/stars/AppSolves/QuickClipAI)
-![GitHub forks](https://img.shields.io/github/forks/AppSolves/QuickClipAI)
-![GitHub issues](https://img.shields.io/github/issues/AppSolves/QuickClipAI)
-![GitHub license](https://img.shields.io/github/license/AppSolves/QuickClipAI)
-
-<h4><code>QuickClipAI</code> is a tool that uses AI to automatically create engaging YouTube shorts and videos from text inputs.
-
-Sit back and relax while <strong>QuickClipAI</strong> boosts your productivity!</h4>
+<h4><code>LanePilot</code> is an AI-powered system that dynamically optimizes traffic flow by analyzing lane utilization and congestion patterns in real time.
+<br>
+It ensures efficient lane allocation to reduce bottlenecks and improve overall road efficiency.
+<br><br>
 
 [Introduction](#introduction-) • [Features](#features-) • [Installation](#installation-%EF%B8%8F) • [Usage](#usage-) • [Credits](#credits-) • [License](#license-)
 
 </div>
+<br>
 
-<br />
-
-> 👋 This is a very early release and _lots_ more documentation and functionality is currently being added.
-
-# QuickClipAI 🤖
+# LanePilot 🤖
 
 ## Introduction 📖
 Welcome to the **QuickClipAI** Project! This project aims to provide an efficient and powerful AI-driven tool for generating engaging YouTube shorts and videos automatically. Whether you're a content creator, marketer, or just someone looking to boost your online presence, QuickClipAI offers a seamless and creative video generation solution.
@@ -63,7 +55,7 @@ pip install -r requirements.txt
 
 3. **Install `Fooocus`**: Download the latest release of [Fooocus](https://github.com/lllyasviel/Fooocus#download) for your operating system and specify it's path within `main.py` before any other function calls: 
 
-> ⚠️ **IMPORTANT**: This project was developed and tested using `Fooocus` version `2.5.5`. If you encounter any issues with other versions, please install the specified version.
+> [!IMPORTANT] ⚠️: This project was developed and tested using `Fooocus` version `2.5.5`. If you encounter any issues with other versions, please install the specified version.
 
 ```python
 # Running this will save the path to the `config/config.json` file.
@@ -253,10 +245,10 @@ Also, check out `CurioBurstz` on [YouTube](https://www.youtube.com/@curioburstz?
 This project is licensed under a custom license with **All Rights Reserved**.  
 No use, distribution, or modification is allowed without explicit permission from the author.
 
-For more information, please see the [LICENSE](LICENSE.txt) file.
+For more information, please see the [LICENSE](LICENSE.md) file.
 
-QuickClipAI © 2024 by Kaan Gönüldinc
+LanePilot © 2025 by Kaan Gönüldinc
 
 ## Conclusion 🎉
 
-Thank you for checking out QuickClipAI! We hope you find this tool useful for your content creation needs. If you have any questions, feedback, or suggestions, please feel free to reach out to us.
+Thank you for checking out LanePilot! We hope you find this tool useful for your content creation needs. If you have any questions, feedback, or suggestions, please feel free to reach out to us.
