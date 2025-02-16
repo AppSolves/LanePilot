@@ -1,16 +1,6 @@
-<style>
-    .image-placeholder {
-        background: url('./assets/github/mockup.png') center/cover no-repeat;
-        border-radius: 25px;
-        width: 100%;
-        min-height: 50vw;
-        height: auto;
-    }
-</style>
-
 <div align="center">
 
-<img src="./assets/github/mockup.gif" alt="LanePilot" class="image-placeholder" />
+<img src="./assets/github/mockup.gif" alt="LanePilot" width="100%" height="auto" min-height="50vw">
 
 # `LanePilot 🚗`
 
