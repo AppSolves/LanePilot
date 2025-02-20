@@ -1,48 +1,70 @@
 # src/common/utils.py
 import os
+from threading import Lock
 
 import yaml
 
 
-def Singleton(cls):
-    """Singleton decorator. Use this decorator to ensure that only one instance of a class is created.
+class Singleton(type):
+    """A thread-safe implementation of Singleton using a metaclass."""
 
-    Returns:
-        cls: The class instance.
-    """
-    __instance__ = None
+    _instances = {}
+    _lock = Lock()
 
-    def __get_instance__(*args, **kwargs):
-        nonlocal __instance__
-        if __instance__ is None:
-            __instance__ = cls(*args, **kwargs)
-        return __instance__
-
-    return __get_instance__
+    def __call__(cls, *args, **kwargs):
+        with cls._lock:
+            if cls not in cls._instances:
+                instance = super().__call__(*args, **kwargs)
+                cls._instances[cls] = instance
+        return cls._instances[cls]
 
 
-def _get_root_dir() -> str:
-    """Get the root directory of the project.
+class Config:
+    """Static class to store project configuration values as read-only properties."""
 
-    Returns:
-        str: The root directory of the project.
-    """
-    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    __CONFIG = {}
+
+    @staticmethod
+    def _get_root_dir() -> str:
+        """Get the root directory of the project."""
+        return os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
+
+    @classmethod
+    def _reload_config(cls) -> None:
+        """Load the configuration from a YAML file into the class variable."""
+        if cls.__CONFIG:
+            return
+
+        root_dir = cls._get_root_dir()
+        config_file_path = os.path.join(root_dir, "project_config.yaml")
+
+        with open(config_file_path, "r", encoding="utf-8") as file:
+            cls.__CONFIG = yaml.safe_load(file)
+            cls.__CONFIG["ROOT_DIR"] = root_dir
+
+    @classmethod
+    def get(cls, key: str, default=None):
+        """Retrieve a config value like a dictionary."""
+        return cls.__CONFIG.get(key, default)
+
+    @classmethod
+    def all(cls):
+        """Return all configuration values."""
+        return cls.__CONFIG.copy()
+
+    def __getattr__(self, key):
+        """Retrieve a config value like an attribute."""
+        return self.get(key)
+
+    def __setattr__(self, key, value):
+        """Prevent modifications of config values."""
+        raise AttributeError("Config properties are read-only!")
+
+    def __delattr__(self, key):
+        """Prevent modifications of config values."""
+        raise AttributeError("Config properties are read-only!")
 
 
-def _setup_project_environment() -> None:
-    """Setup the project environment by reading the `config.yaml` file and setting the project name as a global variable."""
-    global ROOT_DIR, CONFIG_FILE, PROJECT_NAME
-
-    if "PROJECT_NAME" in globals():
-        return
-
-    ROOT_DIR = _get_root_dir()
-    CONFIG_FILE = os.path.join(ROOT_DIR, "project_config.yaml")
-
-    with open(CONFIG_FILE, "r", encoding="utf-8") as file:
-        config = yaml.safe_load(file)
-    PROJECT_NAME = config["project_name"]
-
-
-_setup_project_environment()
+Config._reload_config()

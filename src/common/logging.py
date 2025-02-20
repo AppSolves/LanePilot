@@ -1,13 +1,12 @@
-# src/common/logger.py
+# src/common/logging.py
 import logging
 import logging.handlers
 import os
 
-from src.common.utils import PROJECT_NAME, Singleton
+from src.common.utils import Config, Singleton
 
 
-@Singleton
-class Logger(logging.Logger):
+class Logger(logging.Logger, metaclass=Singleton):
     """General logger class for this project."""
 
     def __init__(
@@ -19,13 +18,14 @@ class Logger(logging.Logger):
             level (int, optional): The logging level. Defaults to logging.DEBUG.
             create_log_file (bool, optional): Whether to create a log file and store it on your drive. Defaults to True.
         """
-        super().__init__(PROJECT_NAME, level)
+        project_name = Config.get("project_name", "Unknown")
+        super().__init__(project_name, level)
         self.addHandler(logging.StreamHandler())
         if create_log_file:
             os.makedirs("logs", exist_ok=True)
             self.addHandler(
                 logging.handlers.RotatingFileHandler(
-                    os.path.join("logs", f"{PROJECT_NAME}.log"),
+                    os.path.join("logs", f"{project_name}.log"),
                     maxBytes=5 * 1024 * 1024,
                     backupCount=5,
                     encoding="utf-8",
@@ -33,8 +33,17 @@ class Logger(logging.Logger):
             )
 
         formatter = logging.Formatter(
-            f"{PROJECT_NAME} :: " + "[%(levelname)s] - [%(asctime)s] --> %(message)s",
+            f"{project_name} :: " + "[%(levelname)s] - [%(asctime)s] --> %(message)s",
             "%Y-%m-%d %H:%M:%S",
         )
         for handler in self.handlers:
             handler.setFormatter(formatter)
+
+    @staticmethod
+    def get_logger() -> "Logger":
+        """Get the logger instance.
+
+        Returns:
+            Logger: The logger instance.
+        """
+        return Logger()
