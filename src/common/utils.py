@@ -38,7 +38,7 @@ def _setup_project_environment() -> None:
         return
 
     ROOT_DIR = _get_root_dir()
-    CONFIG_FILE = os.path.join(ROOT_DIR, "src", "common", "project_config.yaml")
+    CONFIG_FILE = os.path.join(ROOT_DIR, "project_config.yaml")
 
     with open(CONFIG_FILE, "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
