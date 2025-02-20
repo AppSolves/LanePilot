@@ -3,6 +3,7 @@ import os
 from threading import Lock
 
 import yaml
+from dotenv import load_dotenv
 
 
 class Singleton(type):
@@ -19,7 +20,7 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-class Config:
+class Config(metaclass=Singleton):
     """Static class to store project configuration values as read-only properties."""
 
     __CONFIG = {}
@@ -37,6 +38,7 @@ class Config:
         if cls.__CONFIG:
             return
 
+        load_dotenv()
         root_dir = cls._get_root_dir()
         config_file_path = os.path.join(root_dir, "project_config.yaml")
 

@@ -1,1 +1,4 @@
 project_name: "LanePilot"
+
+environment_variables:
+  logging_level: "LANEPILOT_LOG_LEVEL"
