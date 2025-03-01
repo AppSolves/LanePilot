@@ -13,7 +13,7 @@ def get_logger(
     include_relpath: bool = False,
     create_log_file: bool = True,
 ) -> logging.Logger:
-    """Initialize the logger.
+    """Initialize the LanePilot logger.
 
     Args:
         level (int, optional): The logging level. Defaults to logging.DEBUG.
