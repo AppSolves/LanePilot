@@ -9,13 +9,13 @@ DATASET_PATH: str = os.path.join("Data", "Thermal camera", "person_detection")
 
 def delete_cache():
     shutil.rmtree("runs", ignore_errors=True)
-    if os.path.isfile("yolo11n.pt"):
-        os.remove("yolo11n.pt")
+    if os.path.isfile("yolo12n.pt"):
+        os.remove("yolo12n.pt")
 
 
 def main():
     atexit.register(delete_cache)
-    model = YOLO()
+    model = YOLO(model="yolo12n.pt")
     model.train(
         data=os.path.join(DATASET_PATH, "data.yaml"),
         epochs=100,
