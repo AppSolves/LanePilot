@@ -4,8 +4,8 @@ colorama==0.4.6
 contourpy==1.3.1
 cycler==0.12.1
 filelock==3.18.0
-fonttools==4.56.0
-fsspec==2025.3.0
+fonttools==4.57.0
+fsspec==2025.3.2
 idna==3.10
 Jinja2==3.1.6
 kiwisolver==1.4.8
@@ -29,7 +29,7 @@ python-dotenv==1.1.0
 pytz==2025.2
 PyYAML==6.0.2
 requests==2.32.3
-rich==13.9.4
+rich==14.0.0
 scipy==1.15.2
 seaborn==0.13.2
 setuptools==78.1.0
@@ -39,8 +39,8 @@ torch==2.6.0+cu126
 torchaudio==2.6.0+cu126
 torchvision==0.21.0+cu126
 tqdm==4.67.1
-typing_extensions==4.13.0
+typing_extensions==4.13.1
 tzdata==2025.2
-ultralytics==8.3.98
+ultralytics==8.3.103
 ultralytics-thop==2.0.14
 urllib3==2.3.0
