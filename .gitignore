@@ -1,13 +1,14 @@
 .venv
 .vscode
 **/__pycache__/
-
+**/LOCAL
+**.cache
+**.pytest_cache
 *.pyc
 *.log
 *.env
 **/config.json
 **/client_secrets.json
-assets/github/local/
 build/
 output/
 logs/
