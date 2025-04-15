@@ -1,5 +1,4 @@
-# src/common/utils.py
-import os
+from pathlib import Path
 from threading import Lock
 
 import yaml
@@ -24,27 +23,50 @@ class Config(metaclass=Singleton):
     """Static class to store project configuration values as read-only properties."""
 
     __CONFIG = {}
+    MAPPING = {}
 
     @staticmethod
-    def _get_root_dir() -> str:
+    def _get_root_dir() -> Path:
         """Get the root directory of the project."""
-        return os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
+        return Path(__file__).resolve().parent.parent.parent
+
+    @staticmethod
+    def translate(content: str, mapping: dict) -> str:
+        """Translate placeholders in the content using the provided mapping."""
+        for key, value in mapping.items():
+            content = content.replace(key, value)
+        return content
 
     @classmethod
-    def _reload_config(cls) -> None:
+    def load_config_file(cls, config_file: Path) -> dict:
+        """Load a YAML configuration file."""
+        if not config_file.is_file():
+            raise FileNotFoundError(f"Config file not found: {config_file}")
+
+        with open(config_file, "r", encoding="utf-8") as f:
+            config_str = cls.translate(f.read(), cls.MAPPING)
+            config = yaml.safe_load(config_str)
+
+        if not config:
+            raise ValueError(f"Config file is empty: {config_file}")
+
+        return config
+
+    @classmethod
+    def _reload_global_config(cls) -> None:
         """Load the configuration from a YAML file into the class variable."""
         if cls.__CONFIG:
             return
 
         load_dotenv()
         root_dir = cls._get_root_dir()
-        config_file_path = os.path.join(root_dir, "project_config.yaml")
+        cls.MAPPING = {
+            "$ROOT_DIR": root_dir.as_posix(),
+        }
 
-        with open(config_file_path, "r", encoding="utf-8") as file:
-            cls.__CONFIG = yaml.safe_load(file)
-            cls.__CONFIG["ROOT_DIR"] = root_dir
+        config_file_path = Path(root_dir, "project_config.yaml")
+        cls.__CONFIG = cls.load_config_file(config_file_path)
+        cls.__CONFIG["ROOT_DIR"] = root_dir
 
     @classmethod
     def get(cls, key: str, default=None):
@@ -69,4 +91,4 @@ class Config(metaclass=Singleton):
         raise AttributeError("Config properties are read-only!")
 
 
-Config._reload_config()
+Config._reload_global_config()

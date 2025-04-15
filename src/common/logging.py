@@ -1,8 +1,8 @@
-# src/common/logging.py
 import inspect
 import logging
 import logging.handlers
 import os
+from pathlib import Path
 from typing import Optional
 
 from src.common.utils import Config
@@ -10,14 +10,12 @@ from src.common.utils import Config
 
 def get_logger(
     level: Optional[int | str] = None,
-    include_relpath: bool = False,
     create_log_file: bool = True,
 ) -> logging.Logger:
     """Initialize the LanePilot logger.
 
     Args:
         level (int, optional): The logging level. Defaults to logging.DEBUG.
-        include_relpath (bool, optional): Whether to include the relative path of the file that called the logger (CAUTION: Can introduce a delay when called often). Defaults to False.
         create_log_file (bool, optional): Whether to create a log file and store it on your drive. Defaults to True.
 
     Returns:
@@ -25,11 +23,13 @@ def get_logger(
     """
 
     project_name = Config.get("project_name", "Unknown")
-    logging_env_name = Config.get("environment_variables", {}).get(
-        "logging_level", "LANEPILOT_LOG_LEVEL"
-    )
-    level = level or os.environ.get(logging_env_name, logging.DEBUG)
+    root_dir = Path(Config.get("ROOT_DIR", os.getcwd()))
 
+    env_vars = Config.get("environment_variables", {})
+    logging_env_name = env_vars.get("logging_level", None)
+    logging_include_relpaths_name = env_vars.get("logging_include_relpaths", None)
+
+    level = level or os.environ.get(logging_env_name, logging.DEBUG)
     logger = logging.getLogger(project_name)
     logger.setLevel(level)
     logger.propagate = False
@@ -41,7 +41,7 @@ def get_logger(
             os.makedirs("logs", exist_ok=True)
             logger.addHandler(
                 logging.handlers.RotatingFileHandler(
-                    os.path.join("logs", f"{project_name}.log"),
+                    Path(root_dir, "logs", f"{project_name}.log"),
                     maxBytes=5 * 1024 * 1024,
                     backupCount=5,
                     encoding="utf-8",
@@ -49,10 +49,13 @@ def get_logger(
             )
 
     sub_path = ""
-    if include_relpath:
+    if os.environ.get(logging_include_relpaths_name, "false").lower() == "true":
         frm = inspect.stack()[1]
-        sub_path = os.path.relpath(frm.filename, Config.get("project_root"))
-        sub_path = sub_path.replace("\\", "/")
+        try:
+            sub_path = Path(frm.filename).relative_to(root_dir)
+        except ValueError:
+            sub_path = Path(frm.filename).relative_to(Path.cwd())
+        sub_path = sub_path.as_posix()
         sub_path = "/" + sub_path
 
     formatter = logging.Formatter(
