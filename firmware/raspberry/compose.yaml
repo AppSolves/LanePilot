@@ -1,0 +1,10 @@
+services:
+  raspberry:
+    restart: always
+    image: ghcr.io/appsolves/lanepilot:raspberrypi-latest
+    network_mode: host
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "25m"
+        max-file: "3"

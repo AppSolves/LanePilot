@@ -9,6 +9,7 @@
 *.env
 **/config.json
 **/client_secrets.json
-build/
-output/
-logs/
+**/build/
+**/output/
+**/logs/
+**/runtime/

@@ -1,4 +1,10 @@
 project_name: "LanePilot"
 
+global_config_file: "$ROOT_DIR/project_config.yaml"
+global_cache_dir: "$ROOT_DIR/.cache"
+global_assets_dir: "$ROOT_DIR/assets"
+
 environment_variables:
-  logging_level: "LANEPILOT_LOG_LEVEL"
+  logging:
+    level: "DEBUG"
+    include_relative_paths: true

@@ -1,0 +1,53 @@
+servos:
+  type: XL320 # All servos connected to the raspberry need to be the same type
+  baudrate: 115200 # Baudrate for the serial connection
+  uart_port: /dev/ttyAMA0 # UART port for the serial connection
+
+# The following parameters are used to configure the servos
+# The values are based on the Dynamixel protocol and may vary depending on the servo model
+
+# TODO: It was assumed that all servo types require the same amount of bytes for the addresses. Please double check this.
+
+dynamixel:
+  X_SERIES:
+    MODEL_NUMBER: 000 # TODO: Check the model number
+    ADDR_TORQUE_ENABLE: 64
+    ADDR_GOAL_POSITION: 116
+    ADDR_PRESENT_POSITION: 132
+    DXL_MINIMUM_POSITION_VALUE: 0
+    DXL_MAXIMUM_POSITION_VALUE: 4095
+  MX_SERIES:
+    MODEL_NUMBER: 000 # TODO: Check the model number
+    ADDR_TORQUE_ENABLE: 64
+    ADDR_GOAL_POSITION: 116
+    ADDR_PRESENT_POSITION: 132
+    DXL_MINIMUM_POSITION_VALUE: 0
+    DXL_MAXIMUM_POSITION_VALUE: 4095
+  PRO_SERIES:
+    MODEL_NUMBER: 000 # TODO: Check the model number
+    ADDR_TORQUE_ENABLE: 562
+    ADDR_GOAL_POSITION: 596
+    ADDR_PRESENT_POSITION: 611
+    DXL_MINIMUM_POSITION_VALUE: -150000
+    DXL_MAXIMUM_POSITION_VALUE: 150000
+  P_SERIES:
+    MODEL_NUMBER: 000 # TODO: Check the model number
+    ADDR_TORQUE_ENABLE: 512
+    ADDR_GOAL_POSITION: 564
+    ADDR_PRESENT_POSITION: 580
+    DXL_MINIMUM_POSITION_VALUE: -150000
+    DXL_MAXIMUM_POSITION_VALUE: 150000
+  PRO_A_SERIES:
+    MODEL_NUMBER: 000 # TODO: Check the model number
+    ADDR_TORQUE_ENABLE: 512
+    ADDR_GOAL_POSITION: 564
+    ADDR_PRESENT_POSITION: 580
+    DXL_MINIMUM_POSITION_VALUE: -150000
+    DXL_MAXIMUM_POSITION_VALUE: 150000
+  XL320:
+    MODEL_NUMBER: 350
+    ADDR_TORQUE_ENABLE: 24
+    ADDR_GOAL_POSITION: 30
+    ADDR_PRESENT_POSITION: 37
+    DXL_MINIMUM_POSITION_VALUE: 0
+    DXL_MAXIMUM_POSITION_VALUE: 1023

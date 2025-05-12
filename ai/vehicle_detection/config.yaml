@@ -1,0 +1,9 @@
+dataset:
+  path: $ROOT_DIR/assets/data/vehicle_detection/LanePilot.v2i.yolov11.zip
+  convert_classes_with_ids: [0]
+
+model:
+  name: yolo11n-seg.pt
+  num_epochs: 100 # Number of epochs for training
+  workers: 8 # Number of workers for data loading
+  imgsz: 640 # Image size for training

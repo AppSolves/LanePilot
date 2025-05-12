@@ -1,0 +1,40 @@
+name: Build & Push Docker Images to GHCR
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy .dockerignore file
+        run: |
+          for dir in firmware/*/; do
+            cp .dockerignore "$dir"
+          done
+
+      - name: Change directory to firmware
+        run: cd firmware/raspberry
+
+      - name: Build Docker image for Raspberry
+        run: |
+          docker build -f Dockerfile.raspberry -t ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberry-latest .
+
+      - name: Push Docker image to GHCR
+        run: |
+          docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberry-latest

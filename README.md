@@ -40,7 +40,7 @@ git clone https://github.com/AppSolves/QuickClipAI.git
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu128
 ```
 
 3. **Install `Fooocus`**: Download the latest release of [Fooocus](https://github.com/lllyasviel/Fooocus#download) for your operating system and specify it's path within `main.py` before any other function calls: 

@@ -1,0 +1,32 @@
+dataset_path: $ROOT_DIR/assets/data/lane_allocation/LanePilot.lane_allocation.zip
+
+environment:
+  seed: 42 # Random seed for reproducibility
+  num_lanes: 3 # Number of lanes in the environment
+  max_vehicles_per_lane: 6 # Maximum number of vehicles per lane
+  normalization_mode: z_score # Normalization method for the dataset (options: min_max, z_score)
+
+model:
+  num_epochs: 200 # Number of epochs for training
+  batch_size: 512 # Batch size for training
+  num_heads: 8 # Number of attention heads in the model
+  hidden_dim: 64 # Hidden dimension for the model
+
+early_stopping:
+  patience: 20 # Number of epochs with no improvement after which training will be stopped
+
+optimizer:
+  learning_rate: 0.003 # Learning rate for the model
+  t_0: 2 # Number of iterations for the cosine annealing schedule
+  t_mult: 4 # Multiplier for the cosine annealing schedule
+  weight_decay: 0.001 # Weight decay for the model
+  epsilon: 0.000001 # Epsilon for the optimizer
+
+vehicle:
+  height_cm: 3.25
+  max_distance_cm: 0 # Distance between vehicles
+
+camera:
+  resolution: [640, 384] # The camera resolution is 1280x720, but since the model was trained on 640x640 images with black infill,
+  # it is being cropped to 640x384.
+  fov_deg: 70

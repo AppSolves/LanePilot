@@ -1,0 +1,15 @@
+services:
+  jetson:
+    restart: always
+    build:
+      context: .
+      additional_contexts:
+        shared_src: "../../src"
+      dockerfile: ./Dockerfile.jetson
+    network_mode: host
+    runtime: nvidia
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
