@@ -1,4 +1,4 @@
-# No Contributing allowed
+# No Contributing desired
 
 This project is a personal project and I am currently not looking for contributions.
 By now, the repository is situated in an early development stage.
