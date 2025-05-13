@@ -28,6 +28,9 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
+# Give the user permission to access the entire /app directory.
+RUN chown -R appuser:appuser /app
+
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
 # Leverage a bind mount to requirements.txt to avoid having to copy them into
@@ -39,21 +42,14 @@ RUN apt install -y git
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    python -m pip install -r requirements.txt
+    pip install --upgrade pip \
+    && python -m pip install -r requirements.txt
 
 # Clone Dynamixel SDK from GitHub and install it.
 RUN --mount=type=cache,target=/root/.cache/sdks \
     git clone https://github.com/ROBOTIS-GIT/DynamixelSDK.git \
-    && cd DynamixelSDK/python \
-    && pip install . \
-    && cd ../.. \
+    && pip install DynamixelSDK/python \
     && rm -rf DynamixelSDK
-
-# Give the user permission to access the entire /app directory.
-RUN chown -R appuser:appuser /app
-
-# Switch to the non-privileged user to run the application.
-USER appuser
 
 # Copy the source code into the container.
 COPY --from=root / /app
@@ -62,6 +58,9 @@ COPY . .
 # Expose the port that the application listens on.
 EXPOSE ${UDP_PORT}/udp
 EXPOSE ${TCP_PORT}/tcp
+
+# Switch to the non-privileged user to run the application.
+USER appuser
 
 # Run the application.
 CMD ["python", "-m", "src.main"]
