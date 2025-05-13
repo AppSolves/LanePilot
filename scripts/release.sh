@@ -46,14 +46,14 @@ Release $new_version
 > Use the following commands to pull the latest images:
 
 - Raspberry Pi:
-```bash
-docker pull ghcr.io/AppSolves/LanePilot:raspberrypi-latest
-```
+\`\`\`bash
+docker pull ghcr.io/appsolves/lanepilot:raspberrypi-latest
+\`\`\`
 
 - NVIDIA Jetson:
-```bash
-docker pull ghcr.io/AppSolves/LanePilot:jetson-latest
-```
+\`\`\`bash
+docker pull ghcr.io/appsolves/lanepilot:jetson-latest
+\`\`\`
 EOF
 )
 
