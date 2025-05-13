@@ -10,7 +10,7 @@ ARG L4T_VERSION=r36.2.0
 ARG PLATFORM=linux/arm64
 FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:${L4T_VERSION} AS base
 
-LABEL org.opencontainers.image.source https://github.com/AppSolves/LanePilot
+LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
 
 ENV PYTHONUNBUFFERED=1
 # TODO: Test whether this is needed.
