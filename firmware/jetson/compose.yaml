@@ -1,6 +1,7 @@
 services:
   jetson:
     restart: always
+    platform: linux/arm64
     image: ghcr.io/appsolves/lanepilot:jetson-latest
     network_mode: host
     runtime: nvidia

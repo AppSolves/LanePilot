@@ -1,6 +1,7 @@
 services:
   raspberry:
     restart: always
+    platform: linux/arm64
     image: ghcr.io/appsolves/lanepilot:raspberrypi-latest
     network_mode: host
     logging:

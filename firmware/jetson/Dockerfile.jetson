@@ -10,7 +10,7 @@ ARG L4T_VERSION=r36.2.0
 ARG PLATFORM=linux/arm64
 FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:${L4T_VERSION} AS base
 
-RUN apt update -y && apt upgrade -y && apt install -y python3 python3-pip 
+RUN apt update -y && apt install -y python3 python3-pip 
 
 ENV PYTHONUNBUFFERED=1
 # TODO: Test whether this is needed.
