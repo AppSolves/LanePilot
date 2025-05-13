@@ -12,6 +12,12 @@ jobs:
       contents: read
 
     steps:
+      - name: Save lowercase owner and repository names
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY@L}" >> "${GITHUB_ENV}"
+          echo "ACTOR=${GITHUB_ACTOR@L}" >> "${GITHUB_ENV}"
+          echo "Saved environment variables: ${ACTOR}/${REPO}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -53,16 +59,16 @@ jobs:
         run: |
           cd firmware/raspberry
           docker buildx build --platform linux/arm64 --build-context root=../../ --build-context models=../../assets/trained_models -f Dockerfile.raspberry \
-            -t ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-latest \
-            -t ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-${{ github.ref_name }} .
-          docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-latest
-          docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-${{ github.ref_name }}
+            -t ghcr.io/${ACTOR}/${REPO}:raspberrypi-latest \
+            -t ghcr.io/${ACTOR}/${REPO}:raspberrypi-${{ github.ref_name }} .
+          docker push ghcr.io/${ACTOR}/${REPO}:raspberrypi-latest
+          docker push ghcr.io/${ACTOR}/${REPO}:raspberrypi-${{ github.ref_name }}
 
       - name: Build and push Docker image for Jetson Linux
         run: |
           cd ../jetson
           docker buildx build --platform linux/arm64 --build-context root=../../ -f Dockerfile.jetson \
-            -t ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-latest \
-            -t ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-${{ github.ref_name }} .
-          docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-latest
-          docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-${{ github.ref_name }}
+            -t ghcr.io/${ACTOR}/${REPO}:jetson-latest \
+            -t ghcr.io/${ACTOR}/${REPO}:jetson-${{ github.ref_name }} .
+          docker push ghcr.io/${ACTOR}/${REPO}:jetson-latest
+          docker push ghcr.io/${ACTOR}/${REPO}:jetson-${{ github.ref_name }}
