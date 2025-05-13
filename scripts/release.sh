@@ -36,19 +36,31 @@ git tag -a "$new_version" -m "Release $new_version"
 # Push tag to remote
 git push origin "$new_version"
 
+# Define multiline release notes
+release_notes=$(cat <<EOF
+Release $new_version
+
+### Update Docker Images: ###
+> [!TIP]
+> Pull the latest Docker images for the newest features and bug fixes.
+> Use the following commands to pull the latest images:
+
+- Raspberry Pi:
+```bash
+docker pull ghcr.io/AppSolves/LanePilot:raspberrypi-latest
+```
+
+- NVIDIA Jetson:
+```bash
+docker pull ghcr.io/AppSolves/LanePilot:jetson-latest
+```
+EOF
+)
+
 # Create a release
 gh release create "$new_version" \
     --title "$new_version" \
-    --notes "Release $new_version" \
-    --target "$latest_tag" \
-    --generate-notes
-
-# Push the release to GitHub
-gh release upload "$new_version" \
-    --clobber \
-    --title "$new_version" \
-    --notes "Release $new_version" \
-    --target "$latest_tag" \
+    --notes "$release_notes" \
     --generate-notes
 
 echo "✅ Version $new_version released and pushed!"
