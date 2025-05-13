@@ -6,8 +6,8 @@
 
 # Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
 
-ARG PYTHON_VERSION=3.12.10
-FROM python:${PYTHON_VERSION}-slim AS base
+ARG L4T_VERSION=r36.2.0
+FROM nvcr.io/nvidia/l4t-base:${L4T_VERSION} AS base
 
 ENV PYTHONUNBUFFERED=1
 # TODO: Test whether this is needed.
