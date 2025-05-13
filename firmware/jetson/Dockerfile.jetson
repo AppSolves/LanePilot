@@ -49,6 +49,7 @@ USER appuser
 
 # Copy the source code into the container.
 COPY --from=root / /app
+COPY --from=models / /app/models
 COPY . .
 
 # Expose the port that the application listens on.

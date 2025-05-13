@@ -41,20 +41,20 @@ jobs:
             cp .dockerignore "$dir"
           done
 
-      - name: Build Docker image for Raspberry Pi
+      - name: Build and push Docker image for Raspberry Pi
         run: |
           cd firmware/raspberry
-          docker buildx build --platform linux/arm64 --build-context root=../../ -f Dockerfile.raspberry -t ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-latest .
-
-      - name: Push Raspberry Pi Docker image to GHCR
-        run: |
+          docker buildx build --platform linux/arm64 --build-context root=../../ --build-context models=../../assets/trained_models -f Dockerfile.raspberry \
+            -t ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-latest \
+            -t ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-${{ github.ref_name }} .
           docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-latest
+          docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-${{ github.ref_name }}
 
-      - name: Build Docker image for Jetson Linux
+      - name: Build and push Docker image for Jetson Linux
         run: |
           cd ../jetson
-          docker buildx build --platform linux/arm64 --build-context root=../../ -f Dockerfile.jetson -t ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-latest .
-      
-      - name: Push Jetson Linux Docker image to GHCR
-        run: |
+          docker buildx build --platform linux/arm64 --build-context root=../../ -f Dockerfile.jetson \
+            -t ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-latest \
+            -t ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-${{ github.ref_name }} .
           docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-latest
+          docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-${{ github.ref_name }}
