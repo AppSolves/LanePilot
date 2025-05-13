@@ -45,7 +45,7 @@ RUN apt install -y python3 python3-pip
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     pip install --upgrade pip \
-    && python -m pip install -r requirements.txt
+    && python3 -m pip install -r requirements.txt
 
 # Copy the source code into the container.
 COPY --from=root / /app
@@ -60,4 +60,4 @@ EXPOSE ${TCP_PORT}/tcp
 USER appuser
 
 # Run the application.
-CMD ["python", "-m", "src.main"]
+CMD ["python3", "-m", "src.main"]
