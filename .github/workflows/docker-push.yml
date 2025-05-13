@@ -28,8 +28,16 @@ jobs:
           sudo apt install -y make ninja-build libpixman-1-dev libglib2.0-dev
           git clone https://gitlab.com/qemu-project/qemu.git
           cd qemu
-          ./configure
-          make
+          ./configure \
+            --target-list=aarch64-linux-user \
+            --static \
+            --enable-linux-user \
+            --disable-system \
+            --disable-tools \
+            --disable-docs \
+            --prefix=/opt/qemu-arm64
+
+          make -j$(nproc)
           docker run --privileged --rm tonistiigi/binfmt --install all
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
           cd ..
