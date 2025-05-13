@@ -2,10 +2,11 @@ import signal
 import sys
 
 from shared_src.common import StoppableThread
+from shared_src.network import PORTS, ServerClient, discover_peer
 
 from .hardware_control import MODULE_CONFIG, ServoManager
-from .network import ServerThread, discover_peer, run_gstreamer
-from .network.core import PORTS, logger
+from .network import run_gstreamer_caller
+from .network.core import logger
 
 
 def start_network(tcp_port: int, udp_port: int) -> None:
@@ -14,9 +15,9 @@ def start_network(tcp_port: int, udp_port: int) -> None:
         logger.error("No peer found, exiting.")
         sys.exit(1)
 
-    server_thread = ServerThread(tcp_port)
+    server_thread = ServerClient(tcp_port)
     gstreamer_thread = StoppableThread(
-        target=run_gstreamer, args=(peer_ip, udp_port), daemon=True
+        target=run_gstreamer_caller, args=(peer_ip, udp_port), daemon=True
     )
     server_thread.start()
     gstreamer_thread.start()

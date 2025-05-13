@@ -36,10 +36,14 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt
 
+# Give the user permission to access the entire /app directory.
+RUN chown -R appuser:appuser /app
+
 # Switch to the non-privileged user to run the application.
 USER appuser
 
 # Copy the source code into the container.
+COPY --from=root / /app
 COPY . .
 
 # Expose the port that the application listens on.
@@ -47,4 +51,4 @@ EXPOSE ${UDP_PORT}/udp
 EXPOSE ${TCP_PORT}/tcp
 
 # Run the application.
-CMD ["python", "./entry.py"]
+CMD ["python", "-m", "src.main"]

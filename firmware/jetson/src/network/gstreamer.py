@@ -1,0 +1,71 @@
+from typing import Callable
+
+import cv2
+
+from shared_src.common import Singleton, StoppableThread
+
+from .core import logger
+
+
+class GStreamerReceiver(StoppableThread, metaclass=Singleton):
+    """
+    A class that receives GStreamer data and provides a generator for frames.
+    """
+
+    __listeners: list[Callable] = []
+
+    def __init__(self, pipeline: str):
+        self._pipeline = pipeline
+        self._cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+        if not self._cap.isOpened():
+            logger.error("Failed to open video stream")
+            self._cap = None
+
+    def add_listener(self, listener: Callable) -> None:
+        """Add a listener, which receives commands on each event.
+
+        Args:
+            listener: The listener to add.
+        """
+        self.__listeners.append(listener)
+
+    def remove_listener(self, listener: Callable) -> None:
+        """Remove a listener.
+
+        Args:
+            listener: The listener to remove.
+        """
+        self.__listeners.remove(listener)
+
+    def run(self) -> None:
+        for frame in self.frames:
+            for listener in self.__listeners:
+                listener(frame)
+
+    @property
+    def frames(self):
+        """
+        A generator that yields frames from the GStreamer pipeline.
+        """
+        if not self._cap:
+            logger.error("Video stream is not initialized")
+            return
+
+        while True:
+            ret, frame = self._cap.read()
+            if not ret:
+                logger.warning("No frame received")
+                continue
+
+            yield frame
+
+    def dispose(self):
+        """
+        Release the video capture resource.
+        """
+        self.stop()
+        self.__listeners.clear()
+        if self._cap:
+            self._cap.release()
+
+        logger.info("GStreamerReceiver disposed")
