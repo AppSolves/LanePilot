@@ -36,4 +36,19 @@ git tag -a "$new_version" -m "Release $new_version"
 # Push tag to remote
 git push origin "$new_version"
 
+# Create a release
+gh release create "$new_version" \
+    --title "$new_version" \
+    --notes "Release $new_version" \
+    --target "$latest_tag" \
+    --generate-notes
+
+# Push the release to GitHub
+gh release upload "$new_version" \
+    --clobber \
+    --title "$new_version" \
+    --notes "Release $new_version" \
+    --target "$latest_tag" \
+    --generate-notes
+
 echo "✅ Version $new_version released and pushed!"
