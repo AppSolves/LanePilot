@@ -33,7 +33,9 @@ RUN adduser \
 # Leverage a bind mount to requirements.txt to avoid having to copy them into
 # into this layer.
 
-RUN apt update -y --fix-missing && apt install -y git
+RUN apt update -y --fix-missing
+RUN apt upgrade -y --fix-missing
+RUN apt install -y git
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \

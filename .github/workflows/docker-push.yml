@@ -5,7 +5,7 @@ on:
     types: [published]
 
 jobs:
-  build-and-push-raspberry:
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -22,47 +22,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Copy .dockerignore file
+      - name: Update apt packages and install qemu
         run: |
-          for dir in firmware/*/; do
-            cp .dockerignore "$dir"
-          done
-
-      - name: Change directory to firmware
-        run: cd firmware/raspberry
-
-      - name: Build Docker image for Raspberry
-        run: |
-          docker build --build-context root=../../ -f Dockerfile.raspberry -t ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberry-latest .
-
-      - name: Push Docker image to GHCR
-        run: |
-          docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberry-latest
-
-  build-and-push-jetson:
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up QEMU for multi-architecture builds
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/arm64
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+          sudo apt update -y && sudo apt upgrade -y
+          sudo apt install -y make ninja-build libpixman-1-dev
+          git clone https://gitlab.com/qemu-project/qemu.git
+          cd qemu
+          ./configure
+          make
+          docker run --privileged --rm tonistiigi/binfmt --install all
+          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes -c yes
+          cd ..
+          rm -rf ./qemu
 
       - name: Copy .dockerignore file
         run: |
@@ -70,17 +41,20 @@ jobs:
             cp .dockerignore "$dir"
           done
 
-      - name: Change directory to firmware
-        run: cd firmware/jetson
-
-      - name: Build Docker image for Jetson
+      - name: Build Docker image for Raspberry Pi
         run: |
-          docker buildx build \
-            --platform linux/arm64 \
-            -f Dockerfile.jetson \
-            -t ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-latest \
-            --build-context root=../../ .
+          cd firmware/raspberry
+          docker buildx build --platform linux/arm64 --build-context root=../../ -f Dockerfile.raspberry -t ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-latest .
 
-      - name: Push Docker image to GHCR
+      - name: Push Raspberry Pi Docker image to GHCR
+        run: |
+          docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:raspberrypi-latest
+
+      - name: Build Docker image for Jetson Linux
+        run: |
+          cd ../jetson
+          docker buildx build --platform linux/arm64 --build-context root=../../ -f Dockerfile.jetson -t ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-latest .
+      
+      - name: Push Jetson Linux Docker image to GHCR
         run: |
           docker push ghcr.io/${{ github.actor }}/${{ github.repository }}:jetson-latest
