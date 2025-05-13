@@ -47,12 +47,12 @@ Release $new_version
 
 - Raspberry Pi:
 \`\`\`bash
-docker pull ghcr.io/appsolves/lanepilot:raspberrypi-latest
+docker pull ghcr.io/appsolves/lanepilot/raspberrypi:latest
 \`\`\`
 
 - NVIDIA Jetson:
 \`\`\`bash
-docker pull ghcr.io/appsolves/lanepilot:jetson-latest
+docker pull ghcr.io/appsolves/lanepilot/jetson:latest
 \`\`\`
 EOF
 )

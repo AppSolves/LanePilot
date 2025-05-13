@@ -59,16 +59,16 @@ jobs:
         run: |
           cd firmware/raspberry
           docker buildx build --platform linux/arm64 --build-context root=../../ --build-context models=../../assets/trained_models -f Dockerfile.raspberry \
-            -t ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}:raspberrypi-latest \
-            -t ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}:raspberrypi-${{ github.ref_name }} .
-          docker push ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}:raspberrypi-latest
-          docker push ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}:raspberrypi-${{ github.ref_name }}
+            -t ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}/raspberrypi:latest \
+            -t ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}/raspberrypi:${{ github.ref_name }} .
+          docker push ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}/raspberrypi:latest
+          docker push ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}/raspberrypi:${{ github.ref_name }}
 
       - name: Build and push Docker image for Jetson Linux
         run: |
           cd firmware/jetson
           docker buildx build --platform linux/arm64 --build-context root=../../ -f Dockerfile.jetson \
-            -t ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}:jetson-latest \
-            -t ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}:jetson-${{ github.ref_name }} .
-          docker push ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}:jetson-latest
-          docker push ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}:jetson-${{ github.ref_name }}
+            -t ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}/jetson:latest \
+            -t ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}/jetson:${{ github.ref_name }} .
+          docker push ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}/jetson:latest
+          docker push ghcr.io/${{ steps.save-vars.outputs.actor }}/${{ steps.save-vars.outputs.repository }}/jetson:${{ github.ref_name }}
