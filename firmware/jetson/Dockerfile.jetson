@@ -35,7 +35,7 @@ RUN adduser \
 # Give the user permission to access the entire /app directory.
 RUN chown -R appuser:appuser /app
 
-RUN apt update -y --fix-missing && apt upgrade -y --fix-missing
+RUN apt-get update -y --fix-missing && apt-get upgrade -y --fix-missing
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
