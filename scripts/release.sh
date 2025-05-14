@@ -45,7 +45,7 @@ release_notes=$(cat <<EOF
 Release $new_version (automated $release_type update)
 
 ### Update Docker Images: ###
-> [!TIP]
+> [!NOTE]
 > Pull the latest Docker images for the newest features and bug fixes.
 > Use the following commands to pull the latest images:
 
@@ -58,6 +58,10 @@ curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/
 \`\`\`bash
 curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/scripts/compose.sh jetson | bash
 \`\`\`
+
+> [!TIP]
+> It is strongly recommended to enable [SUPER MAXN mode](https://www.jetson-ai-lab.com/initial_setup_jon.html#8-unlock-super-performance) on your Jetson device.
+> This mode allows the Jetson to run at maximum performance, which is beneficial for AI workloads.
 EOF
 )
 
