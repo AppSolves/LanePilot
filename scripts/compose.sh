@@ -7,15 +7,13 @@ if [[ "$1" != "raspberry" && "$1" != "jetson" ]]; then
   exit 1
 fi
 
-# Change to the directory containing the compose.yaml
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")/firmware/$1"
-cd "$PROJECT_ROOT"
+# Set the URL for the remote compose.yaml
+COMPOSE_URL="https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/firmware/$1/compose.yaml"
 
 echo "Pulling the latest image for $1..."
-docker compose pull
+curl -fsSL "$COMPOSE_URL" | docker compose -f - pull
 
 echo "Starting (or restarting) the $1 container..."
-docker compose up -d
+curl -fsSL "$COMPOSE_URL" | docker compose -f - up -d
 
 echo "✅ Done. The $1 container is running with the latest image."
