@@ -5,6 +5,7 @@ services:
     image: ghcr.io/appsolves/lanepilot/jetson:latest
     network_mode: host
     runtime: nvidia
+    gpus: all
     logging:
       driver: "json-file"
       options:
