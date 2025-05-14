@@ -4,8 +4,6 @@
 # If you need more help, visit the Dockerfile reference guide at
 # https://docs.docker.com/go/dockerfile-reference/
 
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
-
 ARG L4T_VERSION=r36.2.0
 ARG PLATFORM=linux/arm64
 FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:${L4T_VERSION} AS base
