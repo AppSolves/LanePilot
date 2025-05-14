@@ -10,14 +10,12 @@ echo "Latest tag: $latest_tag"
 version=${latest_tag#v}
 IFS='.' read -r major minor patch <<< "$version"
 
-# Increment patch (default behavior)
-patch=$((patch + 1))
-
-# Compose new version
-new_version="v$major.$minor.$patch"
-
-# Confirm or allow override via CLI
-if [ "$1" == "minor" ]; then
+# Default: increment patch
+if [ $# -eq 0 || "$1" == "patch" ]; then
+    minor=$((minor))
+    patch=$((patch + 1))
+    new_version="v$major.$minor.$patch"
+elif [ "$1" == "minor" ]; then
     minor=$((minor + 1))
     patch=0
     new_version="v$major.$minor.$patch"
@@ -26,6 +24,9 @@ elif [ "$1" == "major" ]; then
     minor=0
     patch=0
     new_version="v$major.$minor.$patch"
+else
+    echo "❌ Error: Invalid argument '$1'. Use no argument (default: 'patch'), 'minor', or 'major'."
+    exit 1
 fi
 
 echo "Releasing new version: $new_version"
@@ -43,16 +44,10 @@ Release $new_version
 ### Update Docker Images: ###
 > [!TIP]
 > Pull the latest Docker images for the newest features and bug fixes.
-> Use the following commands to pull the latest images:
+> Use the following command to pull the latest images:
 
-- Raspberry Pi:
 \`\`\`bash
 docker pull ghcr.io/appsolves/lanepilot/raspberrypi:latest
-\`\`\`
-
-- NVIDIA Jetson:
-\`\`\`bash
-docker pull ghcr.io/appsolves/lanepilot/jetson:latest
 \`\`\`
 EOF
 )
