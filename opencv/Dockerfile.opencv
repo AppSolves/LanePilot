@@ -80,7 +80,7 @@ LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
 LABEL org.opencontainers.image.description="An image that contains CUDA, CUDNN, TensorRT, PyTorch, OpenCV and GStreamer runtime dependencies."
 LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/LICENSE.md
 
-COPY --from=builder /opt/opencv-install /usr/local
+COPY --from=opencv-builder /opt/opencv-install /usr/local
 
 ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pytorch/torch-2.5.0a0+872d972e41.nv24.08.17622132-cp310-cp310-linux_aarch64.whl
 ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH

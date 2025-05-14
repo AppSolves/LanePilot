@@ -11,6 +11,7 @@ LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
 LABEL org.opencontainers.image.description="The official Docker image for the Raspberry Pi, used to run the LanePilot application. See the repo's `README.md` for more information."
 LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/LICENSE.md
 
+ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 # TODO: Test whether this is needed.
 ENV PYTHONDONTWRITEBYTECODE=0
@@ -38,8 +39,7 @@ RUN chown -R appuser:appuser /app
 # Leverage a bind mount to requirements.txt to avoid having to copy them into
 # into this layer.
 
-RUN apt update -y --fix-missing
-RUN apt upgrade -y --fix-missing
+RUN apt update -y --fix-missing && apt upgrade -y --fix-missing
 RUN apt install -y git
 
 RUN --mount=type=cache,target=/root/.cache/pip \
