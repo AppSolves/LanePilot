@@ -84,9 +84,9 @@ LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSol
 COPY --from=opencv-builder /opt/opencv-install /usr/local
 
 ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pytorch/torch-2.5.0a0+872d972e41.nv24.08.17622132-cp310-cp310-linux_aarch64.whl
-ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-ENV PATH=/usr/local/bin:$PATH
-ENV PYTHONPATH=/usr/local/python:$PYTHONPATH
+ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
+ENV PATH=/usr/local/bin:${PATH:-}
+ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
 RUN python3 -m pip install --upgrade pip
 RUN pip install -U ${TORCH_INSTALL}
