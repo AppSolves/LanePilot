@@ -77,7 +77,7 @@ RUN ldconfig
 FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-runtime AS base
 
 LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
-LABEL org.opencontainers.image.description="An image that contains CUDA, CUDNN, TensorRT, OpenCV and GStreamer runtime dependencies."
+LABEL org.opencontainers.image.description="An image that contains CUDA, CUDNN, TensorRT, PyTorch, OpenCV and GStreamer runtime dependencies."
 LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/LICENSE.md
 
 COPY --from=builder /opt/opencv-install /usr/local
