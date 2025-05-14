@@ -11,43 +11,52 @@ version=${latest_tag#v}
 IFS='.' read -r major minor patch <<< "$version"
 
 # Default: increment patch
-if [ $# -eq 0 || "$1" == "patch" ]; then
+if [ $# -eq 0 ] || [ "$1" == "patch" ]; then
     minor=$((minor))
     patch=$((patch + 1))
     new_version="v$major.$minor.$patch"
+    release_type="patch"
 elif [ "$1" == "minor" ]; then
     minor=$((minor + 1))
     patch=0
     new_version="v$major.$minor.$patch"
+    release_type="minor"
 elif [ "$1" == "major" ]; then
     major=$((major + 1))
     minor=0
     patch=0
     new_version="v$major.$minor.$patch"
+    release_type="major"
 else
     echo "❌ Error: Invalid argument '$1'. Use no argument (default: 'patch'), 'minor', or 'major'."
     exit 1
 fi
 
-echo "Releasing new version: $new_version"
+echo "Releasing new $release_type version: $new_version"
 
 # Create annotated tag
-git tag -a "$new_version" -m "Release $new_version"
+git tag -a "$new_version" -m "Release $new_version (automated $release_type update)"
 
 # Push tag to remote
 git push origin "$new_version"
 
 # Define multiline release notes
 release_notes=$(cat <<EOF
-Release $new_version
+Release $new_version (automated $release_type update)
 
 ### Update Docker Images: ###
 > [!TIP]
 > Pull the latest Docker images for the newest features and bug fixes.
-> Use the following command to pull the latest images:
+> Use the following commands to pull the latest images:
 
+- Raspberry Pi:
 \`\`\`bash
-docker pull ghcr.io/appsolves/lanepilot/raspberrypi:latest
+curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/scripts/compose.sh raspberry | bash
+\`\`\`
+
+- NVIDIA Jetson:
+\`\`\`bash
+curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/scripts/compose.sh jetson | bash
 \`\`\`
 EOF
 )
