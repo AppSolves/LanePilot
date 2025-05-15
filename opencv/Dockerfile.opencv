@@ -26,8 +26,8 @@ RUN apt-get install -y build-essential ninja-build git unzip pkg-config zlib1g-d
     libgtk2.0-dev libgtk-3-dev libcanberra-gtk* \
     python3-pip libjpeg-dev libpng-dev libtiff-dev \
     libavcodec-dev libavformat-dev libswscale-dev \
-    libxvidcore-dev libx264-dev libavresample \
-    libtbb-dev libxine2-dev libcudnn9-dev \
+    libxvidcore-dev libx264-dev \
+    libtbb-dev libxine2-dev \
     libv4l-dev v4l-utils qv4l2 \
     libtesseract-dev libpostproc-dev \
     libvorbis-dev libaom-dev libdav1d-dev \
@@ -41,7 +41,7 @@ RUN apt-get install -y build-essential ninja-build git unzip pkg-config zlib1g-d
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir $HOME/nv-codec-headers_build && cd $HOME/nv-codec-headers_build \
-    && git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git \
+    && git clone https://github.com/FFmpeg/nv-codec-headers.git \
     && cd nv-codec-headers \
     && make && make install \
     && cd $HOME \
