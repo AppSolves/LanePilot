@@ -166,8 +166,16 @@ COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 
 # Copy OpenCV and python bindings
 COPY --from=opencv-builder /opt/opencv-install /opt/opencv-install
+WORKDIR /opt/opencv-install
 RUN pip install --no-cache-dir -U pip && \
-    pip install --force-reinstall --no-cache-dir -U /opt/opencv-install/*.whl
+    opencv_wheel=$(ls opencv_contrib_python-*.whl | head -n1) && \
+    opencv_version=$(echo "$opencv_wheel" | cut -d'-' -f2 | cut -d'+' -f1) && \
+    IFS='.' read -r -a version_parts <<< "$opencv_version" && \
+    version_parts[${#version_parts[@]}-1]=$((version_parts[${#version_parts[@]}-1]+1)) && \
+    new_version=$(IFS='.'; echo "${version_parts[*]}") && \
+    pip install --force-reinstall --upgrade --no-cache-dir "$opencv_wheel" && \
+    pip install "opencv-python>=$opencv_version,<$new_version" --no-deps --no-cache-dir
+
 
 # Verify OpenCV installation
 RUN python3 -c "import cv2; print(cv2.__version__)"
