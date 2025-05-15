@@ -12,6 +12,7 @@ FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-devel AS 
 
 # Compute capability is set for NVIDIA Jetson Orin Nano by default
 ARG CUDA_COMPUTE_CAPABILITY=8.7
+# Set to non-interactive mode to avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies and required packages
@@ -76,56 +77,65 @@ RUN wget https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-
     && rm -rf $HOME/cudnn-linux-aarch64-9.10.0.56_cuda12-archive \
     && rm -rf $HOME/cudnn-linux-aarch64-9.10.0.56_cuda12-archive.tar.xz
 
-WORKDIR /opt
-
-RUN git clone --depth=1 https://github.com/opencv/opencv.git
-RUN git clone --depth=1 https://github.com/opencv/opencv_contrib.git
-
-WORKDIR /opt/opencv/build
-
-RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
-    -DCMAKE_INSTALL_PREFIX=/opt/opencv-install \
-    -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib/modules \
-    -D WITH_OPENCL=OFF \
-    -D WITH_CUDA=ON \
+# Set environment variables for OpenCV build
+ENV ENABLE_CONTRIB=1
+ENV CFLAGS="--std=c++17"
+ENV CXXFLAGS="--std=c++17"
+ENV CMAKE_ARGS="-D CMAKE_BUILD_TYPE=Release \
+    -D WITH_OPENCL=ON \
     -D CUDA_ARCH_BIN=${CUDA_COMPUTE_CAPABILITY} \
     -D CUDA_ARCH_PTX=${CUDA_COMPUTE_CAPABILITY} \
+    -D WITH_CUDA=ON \
     -D WITH_CUDNN=ON \
     -D WITH_CUBLAS=ON \
+    -D WITH_AVIF=ON \
+    -D WITH_JPEG=ON \
+    -D BUILD_JPEG=OFF \
     -D ENABLE_FAST_MATH=ON \
     -D CUDA_FAST_MATH=ON \
+    -D CMAKE_CUDA_STANDARD=17 \
+    -D CMAKE_CUDA_STANDARD_REQUIRED=ON \
     -D OPENCV_DNN_CUDA=ON \
     -D WITH_QT=OFF \
+    -D WITH_VTK=OFF \
     -D WITH_OPENMP=ON \
     -D BUILD_TIFF=ON \
-    -D WITH_AVIF=ON \
-    -D WITH_OPENJPEG=ON \
-    -D WITH_JPEG=ON \
-    -D WITH_PNG=ON \
     -D WITH_FFMPEG=ON \
-    -D WITH_GSTREAMER=ON \
     -D WITH_TBB=ON \
-    -D BUILD_TBB=ON \
     -D BUILD_TESTS=OFF \
-    -D WITH_EIGEN=ON \
-    -D WITH_V4L=ON \
-    -D WITH_LIBV4L=ON \
+    -D WITH_EIGEN=OFF \
     -D WITH_PROTOBUF=ON \
     -D OPENCV_ENABLE_NONFREE=ON \
     -D INSTALL_C_EXAMPLES=OFF \
     -D INSTALL_PYTHON_EXAMPLES=OFF \
-    -D PYTHON3_PACKAGES_PATH=/usr/lib/python3/dist-packages \
     -D OPENCV_GENERATE_PKGCONFIG=ON \
     -D BUILD_EXAMPLES=OFF \
-    -D CMAKE_CXX_FLAGS="-march=native -mtune=native" \
-    -D CMAKE_C_FLAGS="-march=native -mtune=native" ..
+    -D BUILD_opencv_java=OFF \
+    -D CMAKE_CXX_STANDARD=17 \
+    -D CMAKE_CXX_STANDARD_REQUIRED=ON \
+    -D CMAKE_CXX_FLAGS='/arch:AVX2' \
+    -D CMAKE_C_FLAGS='/arch:AVX2' \
+    -D CMAKE_VERBOSE_MAKEFILE=ON \
+    -D WITH_PYTHON=ON \
+    -D WITH_NUMPY=ON \
+    -D OPENCV_GAPI_GSTREAMER=ON \
+    -D WITH_GSTREAMER=ON"
 
-RUN make -j$(nproc) && make install
-WORKDIR /opt/opencv
+# Clone OpenCV-Python
+WORKDIR /opt
+RUN git clone --recursive https://github.com/opencv/opencv-python.git
+WORKDIR /opt/opencv-python
+RUN git submodule update --init --recursive
 
-# Build a wheel for OpenCV
-RUN pip wheel --no-deps .
-RUN ldconfig
+# Update NvEncoder.cpp for OpenCV and commit changes
+RUN wget "https://raw.githubusercontent.com/opencv/opencv_contrib/refs/heads/4.x/modules/cudacodec/src/NvEncoder.cpp" -O opencv_contrib/modules/cudacodec/src/NvEncoder.cpp
+WORKDIR /opt/opencv-python/opencv_contrib
+RUN git add modules/cudacodec/src/NvEncoder.cpp && git commit -m "Update cudacodec submodule to latest version"
+WORKDIR /opt/opencv-python
+RUN git add opencv_contrib && git commit -m "Updated submodule pointer to latest custom version"
+
+# Build OpenCV
+RUN pip wheel . --wheel-dir /opt/opencv-install
 
 ### Final image ###
 FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-runtime AS base
@@ -134,8 +144,11 @@ LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
 LABEL org.opencontainers.image.description="An image that contains CUDA, CUDNN, TensorRT, PyTorch, OpenCV and GStreamer runtime dependencies."
 LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/LICENSE.md
 
+# Set default python version to 3.10
 ARG PYTHON_VERSION=3.10
 ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pytorch/torch-2.5.0a0+872d972e41.nv24.08.17622132-cp310-cp310-linux_aarch64.whl
+
+# Update environment variables
 ENV PATH=/usr/local/bin:${PATH:-}
 ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
@@ -152,41 +165,38 @@ RUN for f in /usr/local/include/ffnvcodec/*; do \
 COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 
 # Copy OpenCV and python bindings
-COPY --from=opencv-builder /opt/opencv-install /usr/local
-COPY --from=opencv-builder /usr/lib/python3/dist-packages/cv2 /usr/local/lib/python${PYTHON_VERSION}/dist-packages/cv2
-RUN ln -sf /usr/local/lib/python${PYTHON_VERSION}/dist-packages/cv2/python-${PYTHON_VERSION}/cv2.cpython-*.so \
-    /usr/local/lib/python${PYTHON_VERSION}/dist-packages/cv2/cv2.so
-# RUN pip install --no-cache-dir -U numpy
+COPY --from=opencv-builder /opt/opencv-install /opt/opencv-install
+RUN pip install --no-cache-dir -U pip && \
+    pip install --force-reinstall --no-cache-dir -U /opt/opencv-install/*.whl
 
-# # Verify OpenCV installation
-# RUN python3 -c "import cv2; print(cv2.__version__)"
+# Verify OpenCV installation
+RUN python3 -c "import cv2; print(cv2.__version__)"
 
-# # Update dependencies
-# RUN ldconfig && \
-#     apt-get update -y --fix-missing && \
-#     apt-get upgrade -y --fix-missing && \
-#     apt-get clean && \
-#     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Update dependencies
+RUN ldconfig && \
+    apt-get update -y --fix-missing && \
+    apt-get upgrade -y --fix-missing && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# # Update pip and install PyTorch
-# RUN pip install --no-cache-dir -U pip && \
-#     pip install --no-cache-dir -U ${TORCH_INSTALL}
+# Install PyTorch
+RUN pip install --no-cache-dir -U ${TORCH_INSTALL}
 
-# # Remove headers, static libs, pkgconfig, docs and other dev stuff to save space
-# RUN rm -rf /usr/local/include \
-#     /usr/local/lib/*.a \
-#     /usr/local/lib/*.la \
-#     /usr/local/lib/*.cmake \
-#     /usr/local/lib/pkgconfig \
-#     /usr/local/lib/cmake \
-#     /usr/local/share \
-#     /usr/local/doc
+# Remove headers, static libs, pkgconfig, docs and other dev stuff to save space
+RUN rm -rf /usr/local/include \
+    /usr/local/lib/*.a \
+    /usr/local/lib/*.la \
+    /usr/local/lib/*.cmake \
+    /usr/local/lib/pkgconfig \
+    /usr/local/lib/cmake \
+    /usr/local/share \
+    /usr/local/doc
 
-# # Strip binaries to reduce size
-# RUN find /usr/local -type f -executable ! -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
+# Strip binaries to reduce size
+RUN find /usr/local -type f -executable ! -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
 
-# # Remove pip cache and __pycache__
-# RUN rm -rf /root/.cache /root/.pip /usr/local/lib/python*/dist-packages/*/__pycache__
+# Remove pip cache and __pycache__
+RUN rm -rf /root/.cache /root/.pip /usr/local/lib/python*/dist-packages/*/__pycache__
 
-# # Set the default command to run when starting the container
-# CMD ["python3", "-c", "import cv2; print(cv2.getBuildInformation())"]
+# Set the default command to run when starting the container
+CMD ["python3", "-c", "import cv2; print(cv2.getBuildInformation())"]
