@@ -152,7 +152,8 @@ COPY --from=opencv-builder /usr/lib/python3/dist-packages/cv2 /usr/local/lib/pyt
 RUN pip install --no-cache-dir -U numpy
 
 # Verify OpenCV installation
-RUN python3 -c "import cv2; print(cv2.__version__)"
+RUN ls -alh /usr/local/lib/python3.10/dist-packages/cv2 && \
+    python3 -c "import cv2; print(cv2.__file__) ; print(cv2.__version__)"
 
 # Update dependencies
 RUN ldconfig && \
