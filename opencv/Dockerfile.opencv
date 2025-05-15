@@ -79,6 +79,23 @@ RUN wget https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-
     && rm -rf $HOME/cudnn-linux-aarch64-9.10.0.56_cuda12-archive \
     && rm -rf $HOME/cudnn-linux-aarch64-9.10.0.56_cuda12-archive.tar.xz
 
+# Clone OpenCV-Python
+WORKDIR /opt
+RUN git clone --recursive https://github.com/opencv/opencv-python.git
+WORKDIR /opt/opencv-python
+RUN git submodule update --init --recursive
+
+# Fool git
+RUN git config --global user.email "test@nonexistent.com" && \
+    git config --global user.name "Test User"
+
+# Update NvEncoder.cpp for OpenCV and commit changes
+RUN wget "https://raw.githubusercontent.com/opencv/opencv_contrib/refs/heads/4.x/modules/cudacodec/src/NvEncoder.cpp" -O opencv_contrib/modules/cudacodec/src/NvEncoder.cpp
+WORKDIR /opt/opencv-python/opencv_contrib
+RUN git add modules/cudacodec/src/NvEncoder.cpp && git commit -m "Update cudacodec submodule to latest version"
+WORKDIR /opt/opencv-python
+RUN git add opencv_contrib && git commit -m "Updated submodule pointer to latest custom version"
+
 # Set environment variables for OpenCV build
 ENV ENABLE_CONTRIB=${OPENCV_CONTRIB}
 ENV CFLAGS="--std=c++17"
@@ -120,23 +137,6 @@ ENV CMAKE_ARGS="-D CMAKE_BUILD_TYPE=Release \
     -D WITH_NUMPY=ON \
     -D OPENCV_GAPI_GSTREAMER=ON \
     -D WITH_GSTREAMER=ON"
-
-# Clone OpenCV-Python
-WORKDIR /opt
-RUN git clone --recursive https://github.com/opencv/opencv-python.git
-WORKDIR /opt/opencv-python
-RUN git submodule update --init --recursive
-
-# Fool git
-RUN git config --global user.email "test@nonexistent.com" && \
-    git config --global user.name "Test User"
-
-# Update NvEncoder.cpp for OpenCV and commit changes
-RUN wget "https://raw.githubusercontent.com/opencv/opencv_contrib/refs/heads/4.x/modules/cudacodec/src/NvEncoder.cpp" -O opencv_contrib/modules/cudacodec/src/NvEncoder.cpp
-WORKDIR /opt/opencv-python/opencv_contrib
-RUN git add modules/cudacodec/src/NvEncoder.cpp && git commit -m "Update cudacodec submodule to latest version"
-WORKDIR /opt/opencv-python
-RUN git add opencv_contrib && git commit -m "Updated submodule pointer to latest custom version"
 
 # Build OpenCV
 RUN pip wheel . --wheel-dir /opt/opencv-install
