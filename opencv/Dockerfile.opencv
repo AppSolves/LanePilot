@@ -131,8 +131,9 @@ LABEL org.opencontainers.image.description="An image that contains CUDA, CUDNN, 
 LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/LICENSE.md
 
 ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pytorch/torch-2.5.0a0+872d972e41.nv24.08.17622132-cp310-cp310-linux_aarch64.whl
-ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
 ENV PATH=/usr/local/bin:${PATH:-}
+ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
 ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
 # Copy NVIDIA Video Codec SDK
@@ -146,9 +147,7 @@ RUN for f in /usr/local/include/ffnvcodec/*; do \
 COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 
 # Copy OpenCV
-COPY --from=opencv-builder /opt/opencv-install /opt/opencv-install
-COPY --from=opencv-builder /usr/lib/python3/dist-packages/cv2 /usr/local/lib/python3.10/dist-packages/cv2
-COPY --from=opencv-builder /usr/lib/python3/dist-packages/numpy /usr/local/lib/python3.10/dist-packages/numpy
+COPY --from=opencv-builder /opt/opencv-install /usr/local
 
 # Verify OpenCV installation
 RUN python3 -c "import cv2; print(cv2.__version__)"
