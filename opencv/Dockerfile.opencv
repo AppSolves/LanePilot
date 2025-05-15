@@ -134,7 +134,7 @@ ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pyt
 ENV PATH=/usr/local/bin:${PATH:-}
 ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
-ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
+ENV PYTHONPATH=/usr/local/python*:${PYTHONPATH:-}
 
 # Copy NVIDIA Video Codec SDK
 COPY --from=opencv-builder /usr/local/include/ffnvcodec/* /usr/local/include/ffnvcodec/
