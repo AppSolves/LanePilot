@@ -121,10 +121,6 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
     -D CMAKE_C_FLAGS="-march=native -mtune=native" ..
 
 RUN make -j$(nproc) && make install
-WORKDIR /opt/opencv/build
-RUN python3 ../modules/python/package/setup.py bdist_wheel && \
-    mkdir -p /opt/wheels && \
-    cp dist/*/*.whl /opt/wheels/
 RUN ldconfig
 
 ### Final image ###
@@ -149,9 +145,8 @@ RUN for f in /usr/local/include/ffnvcodec/*; do \
 # Copy libavif
 COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 
-# Copy OpenCV
-COPY --from=opencv-builder /opt/wheels/*.whl /tmp/
-RUN pip install --no-cache-dir /tmp/*.whl && rm -rf /tmp/*.whl
+# Copy OpenCV python bindings only
+COPY --from=opencv-builder /usr/lib/python3/dist-packages/cv2* /usr/lib/python3/dist-packages/
 
 # Update dependencies
 RUN ldconfig && \
