@@ -20,7 +20,7 @@ else
   echo "✅ OpenCV base image built successfully."
   echo "🚀 Pushing the OpenCV base image to ghcr.io/appsolves/lanepilot/opencv_base:latest"
   
-  docker push --platform linux/arm64 ghcr.io/appsolves/lanepilot/opencv_base:latest
+  docker push ghcr.io/appsolves/lanepilot/opencv_base:latest
   if [ $? -ne 0 ]; then
     echo "❌ Error: Failed to push the OpenCV base image."
     exit 1
