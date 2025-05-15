@@ -157,7 +157,34 @@ COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 # Copy OpenCV
 COPY --from=opencv-builder /opt/opencv-install /usr/local
 
-RUN chmod a+r /usr/local/cuda/include/cudnn*.h /usr/local/cuda/lib64/libcudnn*
-RUN ldconfig
-RUN apt-get update -y --fix-missing && apt-get upgrade -y --fix-missing
-RUN pip install -U pip && pip install -U ${TORCH_INSTALL}
+# Update dependencies
+RUN chmod a+r /usr/local/cuda/include/cudnn*.h /usr/local/cuda/lib64/libcudnn* && \
+    ldconfig && \
+    apt-get update -y --fix-missing && \
+    apt-get upgrade -y --fix-missing && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir -U ${TORCH_INSTALL}
+
+# Remove headers, static libs, pkgconfig, and docs to save space
+RUN find /usr/local -type f -name "*.a" -delete && \
+    find /usr/local -type f -name "*.la" -delete && \
+    find /usr/local -type f -name "*.cmake" -delete && \
+    find /usr/local -type f -name "*.h" -delete && \
+    find /usr/local -type d -name "pkgconfig" -exec rm -rf {} + && \
+    find /usr/local -type d -name "cmake" -exec rm -rf {} + && \
+    find /usr/local -type d -name "include" -exec rm -rf {} + && \
+    find /usr/local -type d -name "doc" -exec rm -rf {} + && \
+    find /usr/local -type d -name "share" -exec rm -rf {} +
+
+# Strip binaries to reduce size
+RUN find /usr/local -type f -executable -exec strip --strip-unneeded {} + || true
+
+# Remove pip cache and __pycache__
+RUN rm -rf /root/.cache /root/.pip /usr/local/lib/python*/dist-packages/*/__pycache__
+
+# Set the default command to run when starting the container
+CMD ["python3", "-c", "import cv2; print(cv2.getBuildInformation())"]
