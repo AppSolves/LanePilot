@@ -30,10 +30,8 @@ RUN adduser \
     --shell "/sbin/nologin" \
     --no-create-home \
     --uid "${UID}" \
-    appuser
-
-# Give the user permission to access the entire /app directory.
-RUN chown -R appuser:appuser /app
+    appuser \
+    && chown -R appuser:appuser /app
 
 RUN apt-get update -y --fix-missing && apt-get upgrade -y --fix-missing
 

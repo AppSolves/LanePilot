@@ -29,10 +29,8 @@ RUN adduser \
     --shell "/sbin/nologin" \
     --no-create-home \
     --uid "${UID}" \
-    appuser
-
-# Give the user permission to access the entire /app directory.
-RUN chown -R appuser:appuser /app
+    appuser \
+    && chown -R appuser:appuser /app
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
@@ -40,7 +38,7 @@ RUN chown -R appuser:appuser /app
 # into this layer.
 
 RUN apt-get update -y --fix-missing && apt-get upgrade -y --fix-missing
-RUN apt-get install -y git
+RUN apt-get install -y --no-install-recommends git && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
