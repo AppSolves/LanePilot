@@ -180,7 +180,6 @@ RUN pip install --no-cache-dir -U pip && \
     pip install --force-reinstall --upgrade --no-cache-dir "$opencv_wheel" && \
     pip install "opencv-python>=$opencv_version,<$new_version" --no-deps --no-cache-dir
 
-
 # Verify OpenCV installation
 RUN python3 -c "import cv2; print(cv2.__version__)"
 
