@@ -135,7 +135,29 @@ ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
 ENV PATH=/usr/local/bin:${PATH:-}
 ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
+# Copy cuDNN
+COPY --from=opencv-builder /usr/local/cuda/include/cudnn*.h /usr/local/cuda/include/
+COPY --from=opencv-builder /usr/local/cuda/lib64/libcudnn* /usr/local/cuda/lib64/
+
+# Copy NVIDIA Video Codec SDK
+COPY --from=opencv-builder /usr/local/include/ffnvcodec/* /usr/local/include/ffnvcodec/
+RUN for f in /usr/local/include/ffnvcodec/*; do \
+    base=$(basename "$f"); \
+    if [[ "$base" == dynlink_* ]]; then \
+    ln -sf "$f" "/usr/local/cuda/include/${base#dynlink_}"; \
+    else \
+    ln -sf "$f" "/usr/local/cuda/include/$base"; \
+    fi; \
+    done
+
+# Copy libavif
+COPY --from=opencv-builder /usr/local/include/avif /usr/local/include/avif
+COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
+
+# Copy OpenCV
 COPY --from=opencv-builder /opt/opencv-install /usr/local
 
+RUN chmod a+r /usr/local/cuda/include/cudnn*.h /usr/local/cuda/lib64/libcudnn*
+RUN ldconfig
 RUN apt-get update -y --fix-missing && apt-get upgrade -y --fix-missing
 RUN pip install -U pip && pip install -U ${TORCH_INSTALL}
