@@ -135,23 +135,14 @@ ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
 ENV PATH=/usr/local/bin:${PATH:-}
 ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
-# Copy cuDNN
-COPY --from=opencv-builder /usr/local/cuda/include/cudnn*.h /usr/local/cuda/include/
-COPY --from=opencv-builder /usr/local/cuda/lib64/libcudnn* /usr/local/cuda/lib64/
-
 # Copy NVIDIA Video Codec SDK
 COPY --from=opencv-builder /usr/local/include/ffnvcodec/* /usr/local/include/ffnvcodec/
 RUN for f in /usr/local/include/ffnvcodec/*; do \
     base=$(basename "$f"); \
-    if [[ "$base" == dynlink_* ]]; then \
     ln -sf "$f" "/usr/local/cuda/include/${base#dynlink_}"; \
-    else \
-    ln -sf "$f" "/usr/local/cuda/include/$base"; \
-    fi; \
     done
 
 # Copy libavif
-COPY --from=opencv-builder /usr/local/include/avif /usr/local/include/avif
 COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 
 # Copy OpenCV
@@ -169,19 +160,18 @@ RUN chmod a+r /usr/local/cuda/include/cudnn*.h /usr/local/cuda/lib64/libcudnn* &
 RUN pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -U ${TORCH_INSTALL}
 
-# Remove headers, static libs, pkgconfig, and docs to save space
-RUN find /usr/local -type f -name "*.a" -delete && \
-    find /usr/local -type f -name "*.la" -delete && \
-    find /usr/local -type f -name "*.cmake" -delete && \
-    find /usr/local -type f -name "*.h" -delete && \
-    find /usr/local -type d -name "pkgconfig" -exec rm -rf {} + && \
-    find /usr/local -type d -name "cmake" -exec rm -rf {} + && \
-    find /usr/local -type d -name "include" -exec rm -rf {} + && \
-    find /usr/local -type d -name "doc" -exec rm -rf {} + && \
-    find /usr/local -type d -name "share" -exec rm -rf {} +
+# Remove headers, static libs, pkgconfig, docs and other dev stuff to save space
+RUN rm -rf /usr/local/include \
+    /usr/local/lib/*.a \
+    /usr/local/lib/*.la \
+    /usr/local/lib/*.cmake \
+    /usr/local/lib/pkgconfig \
+    /usr/local/lib/cmake \
+    /usr/local/share \
+    /usr/local/doc
 
 # Strip binaries to reduce size
-RUN find /usr/local -type f -executable -exec strip --strip-unneeded {} + || true
+RUN find /usr/local -type f -executable -exec strip --strip-unneeded {} + 2>/dev/null || true
 
 # Remove pip cache and __pycache__
 RUN rm -rf /root/.cache /root/.pip /usr/local/lib/python*/dist-packages/*/__pycache__
