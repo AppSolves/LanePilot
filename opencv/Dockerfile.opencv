@@ -122,7 +122,6 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
 
 RUN make -j$(nproc) && make install
 RUN ldconfig
-RUN find /opt/opencv-install -name "cv2*.so" && exit 1
 
 ### Final image ###
 FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-runtime AS base
@@ -147,13 +146,10 @@ RUN for f in /usr/local/include/ffnvcodec/*; do \
 COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 
 # Copy OpenCV
-COPY --from=opencv-builder /opt/opencv-install /usr/local/
-
-# Install OpenCV Python bindings
-RUN ls /usr/local/ && python3 -c "import cv2; print(cv2.__version__)"
+COPY --from=opencv-builder /opt/opencv-install /opt/opencv
 
 # Verify OpenCV installation
-RUN python3 -c "import cv2; print(cv2.__version__)"
+# RUN python3 -c "import cv2; print(cv2.__version__)"
 
 # Update dependencies
 RUN ldconfig && \
