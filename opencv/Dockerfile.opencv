@@ -139,7 +139,7 @@ ENV CMAKE_ARGS="-D CMAKE_BUILD_TYPE=Release \
     -D WITH_GSTREAMER=ON"
 
 # Build OpenCV
-RUN pip wheel . --wheel-dir /opt/opencv-install
+RUN pip wheel . --verbose --wheel-dir /opt/opencv-install
 
 ### Final image ###
 FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-runtime AS base
