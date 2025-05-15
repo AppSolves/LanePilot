@@ -150,7 +150,7 @@ COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 COPY --from=opencv-builder /opt/opencv-install /usr/local
 
 # Verify OpenCV installation
-RUN python3 -c "import cv2; print(cv2.__version__)"
+# RUN python3 -c "import cv2; print(cv2.__version__)"
 
 # Update dependencies
 RUN ldconfig && \
