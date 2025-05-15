@@ -148,7 +148,9 @@ COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 
 # Copy OpenCV and python bindings
 COPY --from=opencv-builder /opt/opencv-install /usr/local
-COPY --from=opencv-builder /usr/lib/python3/dist-packages/cv2 /usr/local/lib/python3.10/dist-packages/cv2
+COPY --from=opencv-builder /usr/lib/python3/dist-packages/cv2 /usr/local/lib/python3*/dist-packages/cv2
+RUN ln -sf /usr/local/lib/python3.10/dist-packages/cv2/python-3.*/cv2.cpython-*.so \
+    /usr/local/lib/python3.10/dist-packages/cv2/cv2.so
 RUN pip install --no-cache-dir -U numpy
 
 # Verify OpenCV installation
