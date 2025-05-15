@@ -14,6 +14,7 @@ FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-devel AS 
 ARG CUDA_COMPUTE_CAPABILITY=8.7
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install dependencies and required packages
 RUN apt-get update -y --fix-missing && apt-get upgrade -y --fix-missing
 RUN apt-get install -y build-essential ninja-build git unzip pkg-config zlib1g-dev \
     python3-dev python3-numpy python-dev-is-python3 \
@@ -40,19 +41,13 @@ RUN apt-get install -y build-essential ninja-build git unzip pkg-config zlib1g-d
     libgoogle-glog-dev libgflags-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install NVIDIA Video Codec SDK
 RUN mkdir $HOME/nv-codec-headers_build && cd $HOME/nv-codec-headers_build \
     && git clone https://github.com/FFmpeg/nv-codec-headers.git \
     && cd nv-codec-headers \
     && make && make install \
     && cd $HOME \
     && rm -rf $HOME/nv-codec-headers_build
-
-RUN git clone https://github.com/AOMediaCodec/libavif.git \
-    && cd libavif && mkdir build && cd build \
-    && cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja \
-    && ninja && ninja install \
-    && cd $HOME \
-    && rm -rf $HOME/libavif
 
 RUN for f in /usr/local/include/ffnvcodec/*; do \
     base=$(basename "$f"); \
@@ -62,6 +57,24 @@ RUN for f in /usr/local/include/ffnvcodec/*; do \
     ln -sf "$f" "/usr/local/cuda/include/$base"; \
     fi; \
     done
+
+# Install libavif
+RUN git clone https://github.com/AOMediaCodec/libavif.git \
+    && cd libavif && mkdir build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja \
+    && ninja && ninja install \
+    && cd $HOME \
+    && rm -rf $HOME/libavif
+
+# Install cuDNN
+RUN wget https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-aarch64/cudnn-linux-aarch64-9.10.0.56_cuda12-archive.tar.xz \
+    && tar -xvf cudnn-linux-aarch64-9.10.0.56_cuda12-archive.tar.xz \
+    && cd cudnn-linux-aarch64-9.10.0.56_cuda12-archive \
+    && cp include/cudnn*.h /usr/local/cuda/include \
+    && cp lib/libcudnn* /usr/local/cuda/lib64 \
+    && cd $HOME \
+    && rm -rf $HOME/cudnn-linux-aarch64-9.10.0.56_cuda12-archive \
+    && rm -rf $HOME/cudnn-linux-aarch64-9.10.0.56_cuda12-archive.tar.xz
 
 WORKDIR /opt
 
