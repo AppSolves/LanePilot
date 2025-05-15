@@ -121,6 +121,7 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
     -D CMAKE_C_FLAGS="-march=native -mtune=native" ..
 
 RUN make -j$(nproc) && make install
+RUN pip wheel . --verbose
 RUN ldconfig
 
 ### Final image ###
