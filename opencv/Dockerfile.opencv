@@ -127,6 +127,10 @@ RUN git clone --recursive https://github.com/opencv/opencv-python.git
 WORKDIR /opt/opencv-python
 RUN git submodule update --init --recursive
 
+# Fool git
+RUN git config --global user.email "test@nonexistent.com" && \
+    git config --global user.name "Test User"
+
 # Update NvEncoder.cpp for OpenCV and commit changes
 RUN wget "https://raw.githubusercontent.com/opencv/opencv_contrib/refs/heads/4.x/modules/cudacodec/src/NvEncoder.cpp" -O opencv_contrib/modules/cudacodec/src/NvEncoder.cpp
 WORKDIR /opt/opencv-python/opencv_contrib
