@@ -124,7 +124,7 @@ RUN make -j$(nproc) && make install
 WORKDIR /opt/opencv/build
 RUN python3 ../modules/python/package/setup.py bdist_wheel && \
     mkdir -p /opt/wheels && \
-    cp dist/*.whl /opt/wheels/
+    cp dist/*/*.whl /opt/wheels/
 RUN ldconfig
 
 ### Final image ###
