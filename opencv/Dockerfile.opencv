@@ -207,5 +207,7 @@ RUN find /usr/local -type f -executable ! -name '*.so*' -exec strip --strip-unne
 # Remove pip cache and __pycache__
 RUN rm -rf /root/.cache /root/.pip /usr/local/lib/python*/dist-packages/*/__pycache__
 
+WORKDIR /
+
 # Set the default command to run when starting the container
 CMD ["python3", "-c", "import cv2; print(cv2.getBuildInformation())"]
