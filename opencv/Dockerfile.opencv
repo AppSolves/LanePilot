@@ -119,11 +119,10 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
     -D BUILD_EXAMPLES=OFF \
     -D CMAKE_CXX_FLAGS="-march=native -mtune=native" \
     -D CMAKE_C_FLAGS="-march=native -mtune=native" ..
-RUN make -j$(nproc) && make install
 
-WORKDIR /opt/opencv
-RUN pip wheel . --verbose --no-cache-dir --no-deps
+RUN make -j$(nproc) && make install
 RUN ldconfig
+RUN find /opt/opencv-install -name "cv2*.so" && exit 1
 
 ### Final image ###
 FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-runtime AS base
