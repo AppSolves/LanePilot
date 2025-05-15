@@ -12,6 +12,8 @@ FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-devel AS 
 
 # Compute capability is set for NVIDIA Jetson Orin Nano by default
 ARG CUDA_COMPUTE_CAPABILITY=8.7
+# Install OpenCV Contrib modules
+ARG OPENCV_CONTRIB=1
 # Set to non-interactive mode to avoid prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -78,7 +80,7 @@ RUN wget https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-
     && rm -rf $HOME/cudnn-linux-aarch64-9.10.0.56_cuda12-archive.tar.xz
 
 # Set environment variables for OpenCV build
-ENV ENABLE_CONTRIB=1
+ENV ENABLE_CONTRIB=${OPENCV_CONTRIB}
 ENV CFLAGS="--std=c++17"
 ENV CXXFLAGS="--std=c++17"
 ENV CMAKE_ARGS="-D CMAKE_BUILD_TYPE=Release \
