@@ -154,7 +154,7 @@ RUN ln -sf /usr/local/lib/python3*/dist-packages/cv2/python-3.*/cv2.cpython-*.so
 RUN pip install --no-cache-dir -U numpy
 
 # Verify OpenCV installation
-# RUN python3 -c "import cv2; print(cv2.__version__)"
+RUN python3 -c "import cv2; print(cv2.__version__)"
 
 # Update dependencies
 RUN ldconfig && \
@@ -164,8 +164,8 @@ RUN ldconfig && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Update pip and install PyTorch
-# RUN pip install --no-cache-dir -U pip && \
-#     pip install --no-cache-dir -U ${TORCH_INSTALL}
+RUN pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir -U ${TORCH_INSTALL}
 
 # Remove headers, static libs, pkgconfig, docs and other dev stuff to save space
 RUN rm -rf /usr/local/include \
