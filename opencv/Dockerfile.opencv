@@ -145,8 +145,11 @@ RUN for f in /usr/local/include/ffnvcodec/*; do \
 # Copy libavif
 COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 
-# Copy OpenCV python bindings only
-COPY --from=opencv-builder /usr/lib/python3/dist-packages/cv2* /usr/lib/python3/dist-packages/
+# Copy OpenCV
+COPY --from=opencv-builder /opt/opencv-install /usr/local/
+
+# Install OpenCV Python bindings
+RUN pip install --no-cache-dir -U /usr/local/python/cv2/python-3/*.whl
 
 # Verify OpenCV installation
 RUN python3 -c "import cv2; print(cv2.__version__)"
