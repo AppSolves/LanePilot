@@ -148,6 +148,9 @@ COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 # Copy OpenCV python bindings only
 COPY --from=opencv-builder /usr/lib/python3/dist-packages/cv2* /usr/lib/python3/dist-packages/
 
+# Verify OpenCV installation
+RUN python3 -c "import cv2; print(cv2.__version__)"
+
 # Update dependencies
 RUN ldconfig && \
     apt-get update -y --fix-missing && \
@@ -155,7 +158,7 @@ RUN ldconfig && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install Python dependencies
+# Update pip and install PyTorch
 RUN pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -U ${TORCH_INSTALL}
 
