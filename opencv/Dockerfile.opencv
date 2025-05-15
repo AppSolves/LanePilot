@@ -54,6 +54,8 @@ RUN git clone https://github.com/AOMediaCodec/libavif.git \
     && cd $HOME \
     && rm -rf $HOME/libavif
 
+RUN ln -s /usr/local/include/ffnvcodec/* /usr/local/include/
+
 WORKDIR /opt
 
 RUN git clone --depth=1 https://github.com/opencv/opencv.git
@@ -73,7 +75,6 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
     -D ENABLE_FAST_MATH=ON \
     -D CUDA_FAST_MATH=ON \
     -D OPENCV_DNN_CUDA=ON \
-    -D ENABLE_NEON=ON \
     -D WITH_QT=OFF \
     -D WITH_OPENMP=ON \
     -D BUILD_TIFF=ON \
