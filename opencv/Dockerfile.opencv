@@ -149,7 +149,7 @@ COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 COPY --from=opencv-builder /opt/opencv-install /usr/local/
 
 # Install OpenCV Python bindings
-RUN pip install --no-cache-dir -U /usr/local/python/cv2/python-3/*.whl
+RUN ls /usr/local/
 
 # Verify OpenCV installation
 RUN python3 -c "import cv2; print(cv2.__version__)"
