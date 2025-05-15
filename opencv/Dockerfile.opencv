@@ -119,8 +119,9 @@ RUN cmake -D CMAKE_BUILD_TYPE=RELEASE \
     -D BUILD_EXAMPLES=OFF \
     -D CMAKE_CXX_FLAGS="-march=native -mtune=native" \
     -D CMAKE_C_FLAGS="-march=native -mtune=native" ..
-
 RUN make -j$(nproc) && make install
+
+WORKDIR /opt/opencv
 RUN pip wheel . --verbose
 RUN ldconfig
 
