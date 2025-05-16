@@ -25,7 +25,7 @@ RUN apt-get install -y build-essential ninja-build git wget unzip pkg-config zli
     libgstreamer-plugins-good1.0-dev \
     libtbb2 cmake libjpeg8-dev libjpeg-turbo8-dev \
     libglew-dev python3-pip libtiff-dev \
-    libavcodec-dev libavformat-dev libswscale-dev \
+    libavcodec-dev libavformat-dev libswscale-dev libswresample-dev \
     libxvidcore-dev libx264-dev \
     libtbb-dev libxine2-dev \
     libv4l-dev v4l-utils qv4l2 \
@@ -41,24 +41,16 @@ RUN apt-get install -y build-essential ninja-build git wget unzip pkg-config zli
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install NVIDIA Video Codec SDK
-RUN mkdir $HOME/nv-codec-headers_build && cd $HOME/nv-codec-headers_build \
-    && git clone https://github.com/FFmpeg/nv-codec-headers.git \
-    && cd nv-codec-headers \
-    && make && make install \
-    && cd $HOME \
-    && rm -rf $HOME/nv-codec-headers_build
-
-RUN for f in /usr/local/include/ffnvcodec/*; do \
-    base=$(basename "$f"); \
-    if [[ "$base" == dynlink_* ]]; then \
-    ln -sf "$f" "/usr/local/cuda/include/${base#dynlink_}"; \
-    else \
-    ln -sf "$f" "/usr/local/cuda/include/$base"; \
-    fi; \
-    done
+COPY ./video_codec_sdk/*.zip /tmp/nv_video_codec_sdk.zip
+RUN unzip /tmp/nv_video_codec_sdk.zip -d /tmp/nv_video_codec_sdk \
+    && rm /tmp/nv_video_codec_sdk.zip \
+    && cp -rf /tmp/nv_video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/lib/ \
+    && mkdir -p /usr/local/cuda/include/ \
+    && cp -rf /tmp/nv_video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/
 
 # Install libavif
-RUN git clone https://github.com/AOMediaCodec/libavif.git \
+RUN cd $HOME \
+    && git clone https://github.com/AOMediaCodec/libavif.git \
     && cd libavif && mkdir build && cd build \
     && cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja \
     && ninja && ninja install \
@@ -147,8 +139,9 @@ RUN pip wheel . --verbose --wheel-dir /opt/opencv-install
 ### Final image ###
 FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-runtime AS base
 
+LABEL org.opencontainers.image.authors="contact@appsolves.dev"
 LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
-LABEL org.opencontainers.image.description="An image that contains CUDA, CUDNN, TensorRT, PyTorch, OpenCV and GStreamer runtime dependencies."
+LABEL org.opencontainers.image.description="An image that contains CUDA, CUDNN, TensorRT, PyTorch, OpenCV (Python) and GStreamer runtime dependencies."
 LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/LICENSE.md
 
 # Set default python version to 3.10
@@ -189,11 +182,8 @@ COPY --from=opencv-builder /usr/local/cuda/include/cudnn*.h /usr/local/cuda/incl
 COPY --from=opencv-builder /usr/local/cuda/lib64/libcudnn* /usr/local/cuda/lib64/
 
 # Copy NVIDIA Video Codec SDK
-COPY --from=opencv-builder /usr/local/include/ffnvcodec/* /usr/local/include/ffnvcodec/
-RUN for f in /usr/local/include/ffnvcodec/*; do \
-    base=$(basename "$f"); \
-    ln -sf "$f" "/usr/local/cuda/include/${base#dynlink_}"; \
-    done
+COPY --from=opencv-builder /tmp/nv_video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/lib/
+COPY --from=opencv-builder /tmp/nv_video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/
 
 # Copy libavif
 COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/

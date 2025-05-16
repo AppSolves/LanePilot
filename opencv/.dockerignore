@@ -5,4 +5,5 @@
 # https://docs.docker.com/go/build-context-dockerignore/
 
 *
+!video_codec_sdk/
 !LICENSE.md
