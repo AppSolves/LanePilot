@@ -16,6 +16,7 @@ from .vehicle_state import NUM_LANES
 def load_dataset_split(
     dataset_path: Path,
     dataset_split: DatasetSplit,
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     max_distance_cm: float = 10.0,
 ) -> list[Data]:
     dataset = []
@@ -36,7 +37,7 @@ def load_dataset_split(
                 raise ValueError(f"Feature dimension mismatch in dataset files: {file}")
 
             edge_index = build_edge_index(x, max_distance=max_distance_cm)
-            data_obj = Data(x=x, edge_index=edge_index, y=y)
+            data_obj = Data(x=x, edge_index=edge_index, y=y).to(device)
             dataset.append(data_obj)
 
     return dataset
@@ -46,7 +47,9 @@ def train():
     """Main function to train the GAT."""
     # Set seed for reproducibility
     environment = MODULE_CONFIG.get("environment")
-    torch.manual_seed(environment.get("seed"))
+    seed = environment.get("seed")
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
     dataset_path = Path(MODULE_CONFIG.get("dataset_path"))
     logger.debug(f"Dataset path: {dataset_path}")
@@ -182,7 +185,7 @@ def train():
         device,
     )
 
-    accuracy = model.test(test_loader, device)
+    accuracy = model.test(test_loader)
     logger.info(f"Accuracy on test split: {accuracy:.2f}%\n")
     logger.info("✅ Training completed successfully! 🚀")
 

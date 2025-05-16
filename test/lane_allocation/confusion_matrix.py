@@ -45,7 +45,11 @@ def plot_confusion_matrix(y_true, y_pred, classes, title=None):
     logger.debug("Plotting confusion matrix...")
 
 
-def evaluate_model(model, test_loader: DataLoader, device: torch.device):
+def evaluate_model(
+    model: LaneAllocationGAT,
+    test_loader: DataLoader,
+    device: torch.device,
+):
     """
     Evaluate the model on the test data and plot the confusion matrix.
 
@@ -55,7 +59,7 @@ def evaluate_model(model, test_loader: DataLoader, device: torch.device):
         device (torch.device): Device to run the model on.
     """
     logger.debug("Evaluating the model...")
-    model.to(device)
+    model.device = device
     model.eval()
 
     all_preds = []

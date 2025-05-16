@@ -1,5 +1,6 @@
 from enum import Enum
 from pathlib import Path
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -41,16 +42,27 @@ class LaneAllocationGAT(torch.nn.Module):
         x = self.output_layer(x)
         return x  # Pooling is not needed since we are classifying each vehicle
 
-    def test(self, test_loader: DataLoader, device: torch.device):
+    @property
+    def device(self):
+        """Get the device of the model."""
+        return next(self.parameters()).device
+
+    @device.setter
+    def device(self, device: torch.device):
+        """Set the device of the model."""
+        for param in self.parameters():
+            param.data = param.data.to(device)
+        self.to(device)
+
+    def test(self, test_loader: DataLoader):
         """Evaluate the model on the test data."""
         logger.debug("Evaluating the model...")
-        self.to(device)
         self.eval()
         correct_preds = 0
         total_preds = 0
         with torch.no_grad():
             for batch in test_loader:
-                batch = batch.to(device)
+                batch = batch.to(self.device)
                 out = self(batch.x, batch.edge_index, batch.batch)
                 pred = out.argmax(dim=1)
                 correct_preds += (pred == batch.y).sum().item()
@@ -61,15 +73,16 @@ class LaneAllocationGAT(torch.nn.Module):
     def inference(
         self,
         model_path: str | Path,
-        device: torch.device,
+        device: Optional[torch.device] = None,
     ):
         """Load the model for inference."""
         logger.debug(f"Loading model from '{model_path}'")
+        device = device or self.device
         state_dict = torch.load(model_path, weights_only=True, map_location=device).get(
             "model_state_dict"
         )
         self.load_state_dict(state_dict)
-        self.to(device)
+        self.device = device
         self.eval()
         logger.debug("Model loaded for inference.")
         return self
