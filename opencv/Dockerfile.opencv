@@ -191,7 +191,7 @@ COPY --from=opencv-builder /opt/opencv-install /opt/opencv-install
 WORKDIR /
 RUN pip install --no-cache-dir -U pip && \
     opencv_wheel=$(ls /opt/opencv-install/opencv_contrib_python_headless-*.whl | head -n1) && \
-    pip install --force-reinstall --upgrade --no-cache-dir "/opt/opencv-install/$opencv_wheel" && \
+    pip install --force-reinstall --upgrade --no-cache-dir "$opencv_wheel" && \
     rm -rf /opt/opencv-install
 
 # Verify OpenCV installation
