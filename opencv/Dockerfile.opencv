@@ -147,7 +147,7 @@ RUN pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -U "numpy>=2.0.0"
 
 # Check NumPy version
-RUN python3 -c "import numpy; print('NumPy für Build:', numpy.__version__, '| Include:', numpy.get_include())"
+RUN python3 -c "import numpy; print('NumPy for build:', numpy.__version__, '| Include:', numpy.get_include())"
 
 # Build OpenCV
 RUN pip wheel . --verbose --wheel-dir /opt/opencv-install
