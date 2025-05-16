@@ -1,3 +1,5 @@
+import argparse
+
 from ultralytics import YOLO
 
 from ai.vehicle_detection.core import Path, logger
@@ -7,7 +9,7 @@ CACHE_DIR: Path = Path(Config.get("global_cache_dir"), "vehicle_detection")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def main():
+def main(confidence: float = 0.5) -> None:
     dataset_path = Path(CACHE_DIR, "test", "images")
     model_path = Path(
         Config.get("global_assets_dir"),
@@ -27,7 +29,7 @@ def main():
     logger.debug(f"Predicting images in {dataset_path}")
     model.predict(
         source=dataset_path,
-        conf=0.5,
+        conf=confidence,
         show=True,
         save=True,
         project=Path(CACHE_DIR, "runs", "segment"),
@@ -35,4 +37,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Vehicle Detection Prediction")
+    parser.add_argument(
+        "-c",
+        "--confidence",
+        type=float,
+        default=0.5,
+        help="Confidence threshold for predictions",
+    )
+    args = parser.parse_args()
+    logger.debug(f"Confidence: {args.confidence}")
+
+    main(args.confidence)
