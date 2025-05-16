@@ -179,6 +179,10 @@ RUN ldconfig && \
     libatlas3-base \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Copy cuDNN
+COPY --from=opencv-builder /usr/local/cuda/include/cudnn*.h /usr/local/cuda/include/
+COPY --from=opencv-builder /usr/local/cuda/lib64/libcudnn* /usr/local/cuda/lib64/
+
 # Copy NVIDIA Video Codec SDK
 COPY --from=opencv-builder /usr/local/include/ffnvcodec/* /usr/local/include/ffnvcodec/
 RUN for f in /usr/local/include/ffnvcodec/*; do \
@@ -198,7 +202,7 @@ RUN pip install --no-cache-dir -U pip && \
     rm -rf /opt/opencv-install
 
 # Verify OpenCV installation
-# RUN python3 -c "import cv2; print(cv2.__version__)"
+RUN python3 -c "import cv2; print(cv2.__version__)"
 
 # Install PyTorch
 RUN pip install --no-cache-dir -U ${TORCH_INSTALL}
