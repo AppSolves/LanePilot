@@ -18,7 +18,13 @@ if [ $? -ne 0 ]; then
   exit 1
 else
   echo "✅ OpenCV base image built successfully."
-  echo "🚀 Pushing the OpenCV base image to ghcr.io/appsolves/lanepilot/opencv_base:latest"
+
+  # Ask the user if they want to push the image
+  read -p "Do you want to push the OpenCV base image to ghcr.io/appsolves/lanepilot? (y/n): " push_image
+  if [[ ! "$push_image" =~ ^[Yy]$ ]]; then
+    echo "🚫 Skipping image push."
+    exit 0
+  fi
   
   # Check if the video_codec_sdk folder is not empty
   if [ -d "video_codec_sdk" ] && [ "$(ls -A video_codec_sdk)" ]; then
@@ -26,6 +32,7 @@ else
     exit 1
   fi
 
+  echo "🚀 Pushing the OpenCV base image to ghcr.io/appsolves/lanepilot/opencv_base:latest"
   docker push ghcr.io/appsolves/lanepilot/opencv_base:latest
 
   if [ $? -ne 0 ]; then
