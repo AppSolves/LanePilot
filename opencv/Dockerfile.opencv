@@ -4,6 +4,14 @@
 # If you need more help, visit the Dockerfile reference guide at
 # https://docs.docker.com/go/dockerfile-reference/
 
+#! NOTE: This image builds OpenCV without the NVIDIA Video Codec SDK by default due to copyright issues.
+#! Thus, the image provided at ghcr.io/appsolves/lanepilot/opencv_base:latest does not include the necessary dependencies.
+
+#! To build the image with the NVIDIA Video Codec SDK, do the following:
+#! 1. Create a directory named video_codec_sdk in the same directory as this Dockerfile.
+#! 2. Download the NVIDIA Video Codec SDK zip file and place it in the video_codec_sdk directory.
+#! 3. Run the `scripts/build_opencv.sh` script to build the image locally with the NVIDIA Video Codec SDK included.
+
 ARG L4T_VERSION=r10.3.0
 ARG PLATFORM=linux/arm64
 
