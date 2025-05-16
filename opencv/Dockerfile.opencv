@@ -175,7 +175,7 @@ RUN ldconfig && \
     libhdf5-103 \
     libgoogle-glog0v5 \
     libtesseract4 \
-    libtbb2 \
+    libtbb12 \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy NVIDIA Video Codec SDK
