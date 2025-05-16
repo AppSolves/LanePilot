@@ -158,8 +158,7 @@ ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
 ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
 # Update dependencies
-RUN sed -i 's/^# deb.*universe/deb &/' /etc/apt/sources.list && \
-    ldconfig && \
+RUN ldconfig && \
     apt-get update -y --fix-missing && \
     apt-get upgrade -y --fix-missing && \
     apt-get install -y --no-install-recommends \
