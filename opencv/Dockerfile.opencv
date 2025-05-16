@@ -137,6 +137,10 @@ ENV CMAKE_ARGS="-D CMAKE_BUILD_TYPE=Release \
     -D OPENCV_GAPI_GSTREAMER=ON \
     -D WITH_GSTREAMER=ON"
 
+# Make sure to build for numpy>=2.0.0
+RUN pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir -U "numpy>=2.0.0"
+
 # Build OpenCV
 RUN pip wheel . --verbose --wheel-dir /opt/opencv-install
 
