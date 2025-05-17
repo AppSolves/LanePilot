@@ -1,5 +1,5 @@
 servos:
-  type: XL320 # All servos connected to the raspberry need to be the same type
+  type: XL320 # All servos connected to the Raspberry Pi need to be the same type
   baudrate: 115200 # Baudrate for the serial connection
   uart_port: /dev/ttyAMA0 # UART port for the serial connection
 
