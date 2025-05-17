@@ -53,12 +53,8 @@ COPY . .
 EXPOSE ${UDP_PORT}/udp
 EXPOSE ${TCP_PORT}/tcp
 
-# Configure the network interface.
-RUN chmod +x /app/shared_src/network/helpers/interface_config.sh \
-    && /app/shared_src/network/helpers/interface_config.sh
-
-# Switch to the non-privileged user to run the application.
-USER appuser
+# Make the entrypoint script executable.
+RUN chmod +x /app/entrypoint.sh
 
 # Run the application.
-ENTRYPOINT ["python3", "-m", "src.main"]
+ENTRYPOINT ["/app/entrypoint.sh", "python3", "-m", "src.main"]

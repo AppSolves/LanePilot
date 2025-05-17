@@ -19,3 +19,7 @@ DEVICE_NAME=${ETH_INTERFACES[0]}
 # Set static IP addresses for the containers
 ip addr replace ${DEVICE_STATIC_IP}/24 dev ${DEVICE_NAME}
 ip link set ${DEVICE_NAME} up
+
+# Start the main application
+echo "[INTERFACE CONFIG] Starting main application..."
+exec "$@"
