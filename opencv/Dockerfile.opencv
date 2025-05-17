@@ -166,7 +166,7 @@ ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pyt
 
 # Update environment variables
 ENV PATH=/usr/local/bin:${PATH:-}
-ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH:-}
+ENV LD_LIBRARY_PATH=/usr/local/lib:/hostlibs:${LD_LIBRARY_PATH:-}
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
 ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
@@ -192,10 +192,6 @@ RUN ldconfig && \
     libatlas3-base \
     libyuv0
 
-# Copy cuDNN
-# COPY --from=opencv-builder /usr/local/cuda/include/cudnn*.h /usr/local/cuda/include/
-# COPY --from=opencv-builder /usr/local/cuda/lib64/libcudnn* /usr/local/cuda/lib64/
-
 # Copy NVIDIA Video Codec SDK
 COPY --from=opencv-builder /tmp/video_codec_sdk /tmp/video_codec_sdk
 RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.so 1>/dev/null 2>&1; then \
@@ -216,9 +212,6 @@ RUN pip install --no-cache-dir -U pip && \
     opencv_wheel=$(ls /opt/opencv-install/opencv_contrib_python_headless-*.whl | head -n1) && \
     pip install --force-reinstall --upgrade --no-cache-dir "$opencv_wheel" && \
     rm -rf /opt/opencv-install
-
-# Verify OpenCV installation
-# RUN python3 -c "import cv2; print(cv2.__version__)"
 
 # Install PyTorch
 RUN pip install --no-cache-dir -U ${TORCH_INSTALL}
