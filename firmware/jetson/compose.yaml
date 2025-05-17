@@ -6,6 +6,10 @@ services:
     restart: always
     platform: linux/arm64
     image: ghcr.io/appsolves/lanepilot/jetson:latest
+    environment:
+      - DEVICE_STATIC_IP=192.168.100.2
+      - UDP_PORT=8000
+      - TCP_PORT=8001
     network_mode: host
     cap_add:
       - NET_ADMIN
@@ -17,5 +21,5 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
+        max-size: "25m"
         max-file: "3"
