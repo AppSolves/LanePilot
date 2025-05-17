@@ -6,6 +6,9 @@ services:
     network_mode: host
     runtime: nvidia
     gpus: all
+    volumes:
+      - /usr/lib/aarch64-linux-gnu:/hostlibs:ro
+      - /usr/local/cuda:/usr/local/cuda:ro
     logging:
       driver: "json-file"
       options:
