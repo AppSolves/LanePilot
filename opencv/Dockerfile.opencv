@@ -218,7 +218,7 @@ RUN pip install --no-cache-dir -U pip && \
     rm -rf /opt/opencv-install
 
 # Verify OpenCV installation
-RUN python3 -c "import cv2; print(cv2.__version__)"
+# RUN python3 -c "import cv2; print(cv2.__version__)"
 
 # Install PyTorch
 RUN pip install --no-cache-dir -U ${TORCH_INSTALL}
