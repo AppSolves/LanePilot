@@ -195,7 +195,7 @@ RUN ldconfig && \
     libatlas3-base \
     libyuv0 \
     iproute2 \
-    linux-headers-$(uname -r) \
+    sudo \
     python3 python3-pip
 
 # Copy NVIDIA Video Codec SDK
