@@ -5,14 +5,14 @@ from .core import NETWORK_CONFIG, logger
 
 
 def discover_peer(
-    timeout: int = 10,
     port: int = NETWORK_CONFIG["ports"].get("udp"),
-    broadcast_ip: str = NETWORK_CONFIG["ips"].get("broadcast"),
+    timeout: int = 10,
 ) -> Optional[str]:
     """
     Sends a broadcast message to discover peers on the network.
     Listens for a response and returns the IP address of the discovered peer.
     """
+    broadcast_ip = NETWORK_CONFIG["ips"].get("broadcast")
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.settimeout(timeout)
@@ -37,8 +37,8 @@ def discover_peer(
 
 def respond_to_broadcast(
     port: int = NETWORK_CONFIG["ports"].get("udp"),
-    stop_on_response: bool = False,
     timeout: int = 10,
+    stop_on_response: bool = False,
 ) -> Optional[str]:
     """
     Listens for broadcast messages and responds to discovery requests.
