@@ -193,8 +193,8 @@ RUN ldconfig && \
     libyuv0
 
 # Copy cuDNN
-COPY --from=opencv-builder /usr/local/cuda/include/cudnn*.h /usr/local/cuda/include/
-COPY --from=opencv-builder /usr/local/cuda/lib64/libcudnn* /usr/local/cuda/lib64/
+# COPY --from=opencv-builder /usr/local/cuda/include/cudnn*.h /usr/local/cuda/include/
+# COPY --from=opencv-builder /usr/local/cuda/lib64/libcudnn* /usr/local/cuda/lib64/
 
 # Copy NVIDIA Video Codec SDK
 COPY --from=opencv-builder /tmp/video_codec_sdk /tmp/video_codec_sdk
