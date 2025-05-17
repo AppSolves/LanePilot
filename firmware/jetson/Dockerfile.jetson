@@ -49,15 +49,16 @@ COPY --from=root / /app
 COPY --from=models / /app/models
 COPY . .
 
-# Enable entrypoint script to be executable.
-RUN chmod +x /app/entrypoint.sh
-
 # Expose the port that the application listens on.
 EXPOSE ${UDP_PORT}/udp
 EXPOSE ${TCP_PORT}/tcp
+
+# Configure the network interface.
+RUN chmod +x /app/shared_src/network/helpers/interface_config.sh \
+    && /app/shared_src/network/helpers/interface_config.sh
 
 # Switch to the non-privileged user to run the application.
 USER appuser
 
 # Run the application.
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["python3", "-m", "src.main"]

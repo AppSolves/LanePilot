@@ -11,8 +11,5 @@ fi
 DEVICE_NAME=${ETH_INTERFACES[0]}
 
 # Set static IP addresses for the containers
-sudo ip addr add ${DEVICE_STATIC_IP}/24 dev ${DEVICE_NAME}
-sudo ip link set ${DEVICE_NAME} up
-
-# Start the Python main application
-exec python3 -m src.main
+ip addr add ${DEVICE_STATIC_IP}/24 dev ${DEVICE_NAME}
+ip link set ${DEVICE_NAME} up
