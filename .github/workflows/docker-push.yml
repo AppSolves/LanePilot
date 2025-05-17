@@ -57,7 +57,7 @@ jobs:
       - name: Build and push Docker image for Raspberry Pi
         run: |
           cd firmware/raspberrypi
-          docker buildx build --platform linux/arm64 --build-context root=../../ -f Dockerfile.raspberrypi \
+          docker buildx build --pull --platform linux/arm64 --build-context root=../../ -f Dockerfile.raspberrypi \
             -t ghcr.io/${{ steps.save-vars.outputs.repository }}/raspberrypi:latest \
             -t ghcr.io/${{ steps.save-vars.outputs.repository }}/raspberrypi:${{ github.ref_name }} .
           docker push ghcr.io/${{ steps.save-vars.outputs.repository }}/raspberrypi:latest
@@ -66,7 +66,7 @@ jobs:
       - name: Build and push Docker image for Jetson Linux
         run: |
           cd firmware/jetson
-          docker buildx build --platform linux/arm64 --build-context root=../../ --build-context models=../../assets/trained_models \
+          docker buildx build --pull --platform linux/arm64 --build-context root=../../ --build-context models=../../assets/trained_models \
             -f Dockerfile.jetson \
             -t ghcr.io/${{ steps.save-vars.outputs.repository }}/jetson:latest \
             -t ghcr.io/${{ steps.save-vars.outputs.repository }}/jetson:${{ github.ref_name }} .
