@@ -4,9 +4,9 @@
 # If you need more help, visit the Dockerfile reference guide at
 # https://docs.docker.com/go/dockerfile-reference/
 
-ARG L4T_VERSION=r36.2.0
+ARG BASE_IMAGE_VERSION=latest
 ARG PLATFORM=linux/arm64
-FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:${L4T_VERSION} AS base
+FROM --platform=${PLATFORM} ghcr.io/appsolves/lanepilot/opencv_base:${BASE_IMAGE_VERSION} AS base
 
 LABEL org.opencontainers.image.authors="contact@appsolves.dev"
 LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
@@ -33,8 +33,6 @@ RUN adduser \
     --uid "${UID}" \
     appuser \
     && chown -R appuser:appuser /app
-
-RUN apt-get update -y --fix-missing && apt-get upgrade -y --fix-missing
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage a cache mount to /root/.cache/pip to speed up subsequent builds.
