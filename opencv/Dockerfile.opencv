@@ -153,7 +153,7 @@ RUN python3 -c "import numpy; print('NumPy for build:', numpy.__version__, '| In
 RUN pip wheel . --verbose --wheel-dir /opt/opencv-install
 
 ### Final image ###
-FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-runtime AS base
+FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:r36.2.0 AS base
 
 LABEL org.opencontainers.image.authors="contact@appsolves.dev"
 LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
