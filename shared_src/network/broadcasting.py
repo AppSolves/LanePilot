@@ -1,15 +1,29 @@
 import socket
 from typing import Optional
 
-from .core import PORTS, logger
+from .core import NETWORK_CONFIG, logger
 
 
 def get_broadcast_addr():
-    ip = socket.gethostbyname(socket.gethostname())
+    self_ip = NETWORK_CONFIG["ips"].get("self")
+    if self_ip:
+        logger.info(f"Using static IP address: {self_ip}")
+        ip = self_ip
+    else:
+        logger.info("No static IP address found, using dynamic IP address.")
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.settimeout(3)
+            sock.connect(("8.8.8.8", 80))
+            ip = sock.getsockname()[0]
+
     return ".".join(ip.split(".")[:-1]) + ".255"
 
 
-def discover_peer(timeout: int = 10, port: int = PORTS["udp"]) -> Optional[str]:
+def discover_peer(
+    timeout: int = 10,
+    port: int = NETWORK_CONFIG["ports"].get("udp"),
+    broadcast_ip: str = NETWORK_CONFIG["ips"].get("broadcast"),
+) -> Optional[str]:
     """
     Sends a broadcast message to discover peers on the network.
     Listens for a response and returns the IP address of the discovered peer.
@@ -19,7 +33,6 @@ def discover_peer(timeout: int = 10, port: int = PORTS["udp"]) -> Optional[str]:
         sock.settimeout(timeout)
 
         message = b"P2P_BROADCAST_REQ"
-        broadcast_ip = get_broadcast_addr()
         sock.sendto(message, (broadcast_ip, port))
         logger.info(f"Broadcasting to {broadcast_ip}:{port}, waiting for response...")
 
@@ -38,15 +51,18 @@ def discover_peer(timeout: int = 10, port: int = PORTS["udp"]) -> Optional[str]:
 
 
 def respond_to_broadcast(
-    port: int = PORTS["udp"],
+    port: int = NETWORK_CONFIG["ports"].get("udp"),
     stop_on_response: bool = False,
+    broadcast_ip: str = NETWORK_CONFIG["ips"].get("broadcast"),
+    timeout: int = 10,
 ) -> Optional[str]:
     """
     Listens for broadcast messages and responds to discovery requests.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("", port))
+        sock.settimeout(timeout)
+        sock.bind((broadcast_ip, port))
 
         logger.info(f"Listening for broadcast messages on port {port}...")
 

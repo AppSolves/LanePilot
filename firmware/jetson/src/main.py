@@ -2,7 +2,7 @@ import signal
 import sys
 
 from shared_src.common import StoppableThread
-from shared_src.network import PORTS, ServerClient, respond_to_broadcast
+from shared_src.network import NETWORK_CONFIG, ServerClient, respond_to_broadcast
 
 from .network.core import logger
 from .network.gstreamer import GStreamerReceiver
@@ -38,4 +38,7 @@ def start_network(tcp_port: int, udp_port: int) -> None:
 
 
 if __name__ == "__main__":
-    start_network(PORTS["tcp"], PORTS["udp"])
+    start_network(
+        NETWORK_CONFIG["ports"].get("tcp"),
+        NETWORK_CONFIG["ports"].get("udp"),
+    )

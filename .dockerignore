@@ -10,3 +10,4 @@
 !src/
 !shared_src/
 !requirements.txt
+!entrypoint.sh

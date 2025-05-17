@@ -17,6 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 # TODO: Test whether this is needed.
 ENV PYTHONDONTWRITEBYTECODE=0
+ENV DEVICE_STATIC_IP=192.168.100.2
 ENV UDP_PORT=8000 TCP_PORT=8001
 
 WORKDIR /app
@@ -48,6 +49,9 @@ COPY --from=root / /app
 COPY --from=models / /app/models
 COPY . .
 
+# Enable entrypoint script to be executable.
+RUN chmod +x /app/entrypoint.sh
+
 # Expose the port that the application listens on.
 EXPOSE ${UDP_PORT}/udp
 EXPOSE ${TCP_PORT}/tcp
@@ -56,4 +60,4 @@ EXPOSE ${TCP_PORT}/tcp
 USER appuser
 
 # Run the application.
-CMD ["python3", "-m", "src.main"]
+ENTRYPOINT ["/app/entrypoint.sh"]

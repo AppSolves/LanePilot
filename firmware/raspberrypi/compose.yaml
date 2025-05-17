@@ -7,6 +7,8 @@ services:
     platform: linux/arm64
     image: ghcr.io/appsolves/lanepilot/raspberrypi:latest
     network_mode: host
+    cap_add:
+      - NET_ADMIN
     logging:
       driver: "json-file"
       options:

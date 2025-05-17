@@ -2,7 +2,7 @@ import signal
 import sys
 
 from shared_src.common import StoppableThread
-from shared_src.network import PORTS, ServerClient, discover_peer
+from shared_src.network import NETWORK_CONFIG, ServerClient, discover_peer
 
 from .hardware_control import MODULE_CONFIG, ServoManager
 from .network import run_gstreamer_caller
@@ -35,4 +35,7 @@ def start_network(tcp_port: int, udp_port: int) -> None:
 
 
 if __name__ == "__main__":
-    start_network(PORTS["tcp"], PORTS["udp"])
+    start_network(
+        NETWORK_CONFIG["ports"].get("tcp"),
+        NETWORK_CONFIG["ports"].get("udp"),
+    )
