@@ -4,6 +4,11 @@ from typing import Optional
 from .core import PORTS, logger
 
 
+def get_broadcast_addr():
+    ip = socket.gethostbyname(socket.gethostname())
+    return ".".join(ip.split(".")[:-1]) + ".255"
+
+
 def discover_peer(timeout: int = 10, port: int = PORTS["udp"]) -> Optional[str]:
     """
     Sends a broadcast message to discover peers on the network.
@@ -14,8 +19,9 @@ def discover_peer(timeout: int = 10, port: int = PORTS["udp"]) -> Optional[str]:
         sock.settimeout(timeout)
 
         message = b"P2P_BROADCAST_REQ"
-        sock.sendto(message, ("<broadcast>", port))
-        logger.info("Broadcast sent, waiting for response...")
+        broadcast_ip = get_broadcast_addr()
+        sock.sendto(message, (broadcast_ip, port))
+        logger.info(f"Broadcasting to {broadcast_ip}:{port}, waiting for response...")
 
         try:
             data, addr = sock.recvfrom(1024)
