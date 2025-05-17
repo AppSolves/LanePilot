@@ -17,5 +17,5 @@ fi
 DEVICE_NAME=${ETH_INTERFACES[0]}
 
 # Set static IP addresses for the containers
-ip addr add ${DEVICE_STATIC_IP}/24 dev ${DEVICE_NAME}
+ip addr replace ${DEVICE_STATIC_IP}/24 dev ${DEVICE_NAME}
 ip link set ${DEVICE_NAME} up
