@@ -12,11 +12,12 @@
 #! 2. Download the NVIDIA Video Codec SDK zip file and place it in the video_codec_sdk directory.
 #! 3. Run the `scripts/build_opencv.sh` script to build the image locally with the NVIDIA Video Codec SDK included.
 
-ARG L4T_VERSION=r10.3.0
+ARG L4T_TRT_VERSION=r10.3.0
+ARG BASE_IMAGE_VERSION=r36.2.0
 ARG PLATFORM=linux/arm64
 
 ### Builder image ###
-FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_VERSION}-devel AS opencv-builder
+FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-tensorrt:${L4T_TRT_VERSION}-devel AS opencv-builder
 
 # Compute capability is set for NVIDIA Jetson Orin Nano by default
 ARG CUDA_COMPUTE_CAPABILITY=8.7
@@ -153,7 +154,7 @@ RUN python3 -c "import numpy; print('NumPy for build:', numpy.__version__, '| In
 RUN pip wheel . --verbose --wheel-dir /opt/opencv-install
 
 ### Final image ###
-FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:r36.2.0 AS base
+FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:${BASE_IMAGE_VERSION} AS base
 
 LABEL org.opencontainers.image.authors="contact@appsolves.dev"
 LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
