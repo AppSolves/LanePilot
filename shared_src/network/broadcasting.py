@@ -46,7 +46,7 @@ def respond_to_broadcast(
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.settimeout(timeout)
-        sock.bind(("", port))
+        sock.bind((NETWORK_CONFIG["ips"].get("self"), port))
 
         logger.info(f"Listening for broadcast messages on port {port}...")
 
