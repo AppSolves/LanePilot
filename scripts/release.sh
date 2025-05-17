@@ -51,12 +51,12 @@ Release $new_version (automated $release_type update)
 
 - Raspberry Pi:
 \`\`\`bash
-curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/scripts/compose.sh raspberry | bash
+curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/scripts/compose.sh | bash -s raspberry
 \`\`\`
 
 - NVIDIA Jetson:
 \`\`\`bash
-curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/scripts/compose.sh jetson | bash
+curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/scripts/compose.sh | bash -s jetson
 \`\`\`
 
 > [!TIP]
