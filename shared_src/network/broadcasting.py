@@ -4,21 +4,6 @@ from typing import Optional
 from .core import NETWORK_CONFIG, logger
 
 
-def get_broadcast_addr():
-    self_ip = NETWORK_CONFIG["ips"].get("self")
-    if self_ip:
-        logger.info(f"Using static IP address: {self_ip}")
-        ip = self_ip
-    else:
-        logger.info("No static IP address found, using dynamic IP address.")
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.settimeout(3)
-            sock.connect(("8.8.8.8", 80))
-            ip = sock.getsockname()[0]
-
-    return ".".join(ip.split(".")[:-1]) + ".255"
-
-
 def discover_peer(
     timeout: int = 10,
     port: int = NETWORK_CONFIG["ports"].get("udp"),
