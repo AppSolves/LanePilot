@@ -17,8 +17,12 @@ fi
 DEVICE_NAME=${ETH_INTERFACES[0]}
 
 # Set static IP addresses for the containers
-ip addr replace ${DEVICE_STATIC_IP}/24 dev ${DEVICE_NAME}
-ip link set ${DEVICE_NAME} up
+if ip addr replace ${DEVICE_STATIC_IP}/24 dev ${DEVICE_NAME} && ip link set ${DEVICE_NAME} up; then
+    echo "[INTERFACE CONFIG] Static IP address ${DEVICE_STATIC_IP} set for interface ${DEVICE_NAME}."
+else
+    echo "[INTERFACE CONFIG] Error: Failed to configure interface ${DEVICE_NAME}." >&2
+    exit 1
+fi
 
 # Start the main application as "appuser"
 echo "[INTERFACE CONFIG] Starting main application..."
