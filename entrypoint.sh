@@ -20,6 +20,6 @@ DEVICE_NAME=${ETH_INTERFACES[0]}
 ip addr replace ${DEVICE_STATIC_IP}/24 dev ${DEVICE_NAME}
 ip link set ${DEVICE_NAME} up
 
-# Start the main application
+# Start the main application as "appuser"
 echo "[INTERFACE CONFIG] Starting main application..."
-exec "$@"
+exec gosu appuser "$@"

@@ -57,4 +57,5 @@ EXPOSE ${TCP_PORT}/tcp
 RUN chmod +x /app/entrypoint.sh
 
 # Run the application.
-ENTRYPOINT ["/app/entrypoint.sh", "python3", "-m", "src.main"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["python3", "-m", "src.main"]
