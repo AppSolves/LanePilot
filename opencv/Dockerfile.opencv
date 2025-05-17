@@ -160,7 +160,7 @@ FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:${BASE_IMAGE_VERSION} AS bas
 
 LABEL org.opencontainers.image.authors="contact@appsolves.dev"
 LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
-LABEL org.opencontainers.image.description="An image that contains CUDA, CUDNN, TensorRT, PyTorch, OpenCV (Python) and GStreamer runtime dependencies."
+LABEL org.opencontainers.image.description="An image that contains and/or mounts CUDA, CUDNN, TensorRT, PyTorch, OpenCV (Python) and GStreamer runtime dependencies."
 LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/LICENSE.md
 
 # Set default python version to 3.10
