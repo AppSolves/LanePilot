@@ -2,8 +2,8 @@
 
 set -e
 
-if [[ "$1" != "raspberry" && "$1" != "jetson" ]]; then
-  echo "Usage: $0 [raspberry|jetson]"
+if [[ "$1" != "raspberrypi" && "$1" != "jetson" ]]; then
+  echo "Usage: $0 [raspberrypi|jetson]"
   exit 1
 fi
 

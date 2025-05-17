@@ -1,5 +1,8 @@
+name: lanepilot
+
 services:
-  raspberry:
+  raspberrypi:
+    container_name: raspberrypi
     restart: always
     platform: linux/arm64
     image: ghcr.io/appsolves/lanepilot/raspberrypi:latest
