@@ -3,7 +3,7 @@
 set -e  # Exit on error
 
 # Get latest tag
-latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 echo "Latest tag: $latest_tag"
 
 # Strip 'v' and split version
