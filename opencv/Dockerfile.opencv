@@ -190,7 +190,8 @@ RUN ldconfig && \
     libtesseract4 \
     libtbb12 \
     libatlas3-base \
-    libyuv0
+    libyuv0 \
+    python3 python3-pip
 
 # Copy NVIDIA Video Codec SDK
 COPY --from=opencv-builder /tmp/video_codec_sdk /tmp/video_codec_sdk
