@@ -34,4 +34,7 @@ NETWORK_CONFIG: dict = {
         "udp": int(os.environ.get("UDP_PORT")),
         "tcp": int(os.environ.get("TCP_PORT")),
     },
+    "secrets": {
+        "handshake": os.environ.get("HANDSHAKE_SECRET", "default"),
+    },
 }

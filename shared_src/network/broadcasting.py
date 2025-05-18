@@ -1,3 +1,6 @@
+import hashlib
+import hmac
+import os
 import socket
 from typing import Optional
 
@@ -24,7 +27,8 @@ def discover_peer(
             sock.settimeout(timeout)
             sock.bind(("", 0))
 
-            message = b"P2P_BROADCAST_REQ"
+            challenge = os.urandom(16)
+            message = b"P2P_BROADCAST_REQ:" + challenge
             try:
                 sock.sendto(message, (broadcast_ip, port))
                 logger.info(
@@ -38,8 +42,18 @@ def discover_peer(
 
                 logger.info(f"Found peer at {addr[0]}: {data}")
 
-                if data != b"P2P_BROADCAST_RES":
+                if not data.startswith(b"P2P_BROADCAST_RES:"):
                     logger.warning("Invalid response, expected P2P_BROADCAST_RES.")
+                    return None
+
+                received_hmac = data.split(b":", 1)[1]
+                expected_hmac = hmac.new(
+                    NETWORK_CONFIG["secrets"].get("handshake").encode(),
+                    challenge,
+                    hashlib.sha256,
+                ).digest()
+                if not hmac.compare_digest(received_hmac, expected_hmac):
+                    logger.warning("HMAC verification failed. Peer not authorized.")
                     return None
 
                 return addr[0]
@@ -82,11 +96,14 @@ def respond_to_broadcast(
 
                 logger.info(f"Received message from {addr[0]}: {data}")
 
-                if data == b"P2P_BROADCAST_REQ":
-                    logger.info(
-                        f"Valid broadcast request received from {addr[0]}. Sending response..."
-                    )
-                    response = b"P2P_BROADCAST_RES"
+                if data.startswith(b"P2P_BROADCAST_REQ:"):
+                    challenge = data.split(b":", 1)[1]
+                    response_hmac = hmac.new(
+                        NETWORK_CONFIG["secrets"].get("handshake").encode(),
+                        challenge,
+                        hashlib.sha256,
+                    ).digest()
+                    response = b"P2P_BROADCAST_RES:" + response_hmac
                     sock.sendto(response, addr)
                     if stop_on_response:
                         logger.info("Response sent, stopping broadcast responder.")
