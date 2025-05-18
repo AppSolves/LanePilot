@@ -7,7 +7,7 @@ from .core import NETWORK_CONFIG, logger
 def discover_peer(
     port: int = NETWORK_CONFIG["ports"].get("udp"),
     timeout: int = 10,
-    retries: int = 1,
+    retries: int = 3,
 ) -> Optional[str]:
     """
     Sends a broadcast message to discover peers on the network.
