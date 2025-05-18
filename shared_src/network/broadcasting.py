@@ -7,37 +7,54 @@ from .core import NETWORK_CONFIG, logger
 def discover_peer(
     port: int = NETWORK_CONFIG["ports"].get("udp"),
     timeout: int = 10,
+    retries: int = 1,
 ) -> Optional[str]:
     """
     Sends a broadcast message to discover peers on the network.
     Listens for a response and returns the IP address of the discovered peer.
     """
     broadcast_ip = NETWORK_CONFIG["ips"].get("broadcast")
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.settimeout(timeout)
-        sock.bind(("", port))
+    if not broadcast_ip:
+        logger.error("Broadcast IP not configured in NETWORK_CONFIG.")
+        return None
 
-        message = b"P2P_BROADCAST_REQ"
-        sock.sendto(message, (broadcast_ip, port))
-        logger.info(f"Broadcasting to {broadcast_ip}:{port}, waiting for response...")
+    for attempt in range(retries):
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            sock.settimeout(timeout)
+            sock.bind(("", 0))
 
-        try:
-            data, addr = sock.recvfrom(1024)
-            if addr[0] == NETWORK_CONFIG["ips"].get("self"):
-                logger.info(f"Received response from self ({addr[0]}), ignoring.")
+            message = b"P2P_BROADCAST_REQ"
+            try:
+                sock.sendto(message, (broadcast_ip, port))
+                logger.info(
+                    f"[{attempt+1}/{retries}] Broadcasting to {broadcast_ip}:{port}, waiting for response..."
+                )
+
+                data, addr = sock.recvfrom(1024)
+                if addr[0] == NETWORK_CONFIG["ips"].get("self"):
+                    logger.info(f"Received response from self ({addr[0]}), ignoring.")
+                    return None
+
+                logger.info(f"Found peer at {addr[0]}: {data}")
+
+                if data != b"P2P_BROADCAST_RES":
+                    logger.warning("Invalid response, expected P2P_BROADCAST_RES.")
+                    return None
+
+                return addr[0]
+
+            except socket.timeout:
+                logger.warning(
+                    f"Attempt {attempt+1} timed out. Retrying..."
+                    if attempt < retries - 1
+                    else "No response, peer not found."
+                )
+            except Exception as e:
+                logger.error(f"Error during peer discovery: {e}")
                 return None
 
-            logger.info(f"Found peer at {addr[0]}: {data}")
-
-            if data != b"P2P_BROADCAST_RES":
-                logger.warning("Invalid response, expected P2P_BROADCAST_RES.")
-                return None
-
-            return addr[0]
-        except socket.timeout:
-            logger.error("No response, peer not found.")
-            return None
+    return None
 
 
 def respond_to_broadcast(
@@ -76,6 +93,7 @@ def respond_to_broadcast(
                         return addr[0]
                 else:
                     logger.warning(f"Invalid message received from {addr[0]}: {data}")
+
         except KeyboardInterrupt:
             logger.info("Broadcast listener stopped by user.")
             return None
