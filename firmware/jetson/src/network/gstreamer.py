@@ -14,7 +14,12 @@ class GStreamerReceiver(StoppableThread, metaclass=Singleton):
 
     __listeners: list[Callable] = []
 
-    def __init__(self, pipeline: str):
+    def __init__(self, pipeline: str, *args, **kwargs) -> None:
+        """Initialize the GStreamer receiver.
+        Args:
+            pipeline (str): The GStreamer pipeline to use.
+        """
+        super().__init__(*args, **kwargs)
         self._pipeline = pipeline
         self._cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
         if not self._cap.isOpened():

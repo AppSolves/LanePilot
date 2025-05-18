@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 
 import zmq
 
@@ -11,7 +11,14 @@ class ServerClient(StoppableThread):
 
     __listeners: list[Callable] = []
 
-    def __init__(self, port: int, is_server: bool = True, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        port: int,
+        *args,
+        is_server: bool = True,
+        server_ip: Optional[str] = None,
+        **kwargs,
+    ) -> None:
         """Initialize the server/client thread.
 
         Args:
@@ -27,7 +34,7 @@ class ServerClient(StoppableThread):
             self.socket.bind(f"tcp://*:{self.port}")
         else:
             self.type = "Client"
-            self.server_ip = kwargs.get("server_ip")
+            self.server_ip = server_ip
             if not self.server_ip:
                 raise ValueError("Server IP is required for client mode.")
             self.socket.connect(f"tcp://{self.server_ip}:{self.port}")

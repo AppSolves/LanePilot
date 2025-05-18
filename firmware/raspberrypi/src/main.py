@@ -15,7 +15,7 @@ def start_network(tcp_port: int, udp_port: int) -> None:
         logger.error("No peer found, exiting.")
         sys.exit(1)
 
-    server_thread = ServerClient(tcp_port)
+    server_thread = ServerClient(tcp_port, daemon=True)
     gstreamer_thread = StoppableThread(
         target=run_gstreamer_caller, args=(peer_ip, udp_port), daemon=True
     )
