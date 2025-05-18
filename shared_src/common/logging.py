@@ -1,10 +1,28 @@
 import inspect
 import logging
 import logging.handlers
+import os
 from pathlib import Path
 from typing import Optional
 
 from .utils import Config
+
+
+def python_to_gst_level(py_level: int) -> int:
+    if py_level >= 50:  # CRITICAL
+        return 1  # ERROR
+    elif py_level >= 40:
+        return 1  # ERROR
+    elif py_level >= 30:
+        return 2  # WARNING
+    elif py_level >= 20:
+        return 4  # INFO
+    elif py_level >= 10:
+        return 5  # DEBUG
+    elif py_level > 0:
+        return 7  # TRACE
+    else:
+        return 0  # none
 
 
 def get_logger(
@@ -63,3 +81,12 @@ def get_logger(
         handler.setFormatter(formatter)
 
     return logger
+
+
+# Check if _ROOT_LOGGER is already set
+if "_ROOT_LOGGER" not in locals():
+    _ROOT_LOGGER = get_logger(create_log_file=False)
+
+
+if not os.environ.get("GST_DEBUG"):
+    os.environ["GST_DEBUG"] = str(python_to_gst_level(_ROOT_LOGGER.level))
