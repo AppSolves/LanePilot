@@ -154,10 +154,11 @@ RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.zip 1>/dev/null 
 
 # Ensure that the NVIDIA Video Codec SDK is available
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64/:${LD_LIBRARY_PATH:-}
-RUN if [ -f /usr/lib/$(uname -m)-linux-gnu/libcuda.so ]; then \
-    ln -sf /usr/lib/$(uname -m)-linux-gnu/libcuda.so /usr/local/cuda/lib64/libcuda.so && ldconfig; \
+RUN LIBCUDA=$(find / -name libcuda.so -print -quit) && \
+    if [ -f "$LIBCUDA" ]; then \
+    ln -sf "$LIBCUDA" /usr/local/cuda/lib64/libcuda.so && ldconfig; \
     else \
-    echo "ERROR: /usr/lib/$(uname -m)-linux-gnu/libcuda.so not found!" && exit 1; \
+    echo "ERROR: libcuda.so not found!" && exit 1; \
     fi
 
 # Build OpenCV
