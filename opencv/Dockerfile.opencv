@@ -153,8 +153,10 @@ RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.zip 1>/dev/null 
     fi
 
 # Ensure libcuda.so is available for cudacodec (Video Codec SDK)
-RUN if [ ! -f /usr/local/cuda/lib64/libcuda.so ]; then \
-    ln -sf /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so /usr/local/cuda/lib64/libcuda.so || true; \
+RUN if [ -f /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so ]; then \
+    ln -sf /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so /usr/local/cuda/lib64/libcuda.so; \
+    else \
+    echo "ERROR: /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so not found!" && exit 1; \
     fi
 
 # Build OpenCV
