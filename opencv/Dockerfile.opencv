@@ -144,7 +144,7 @@ COPY . /tmp
 RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.zip 1>/dev/null 2>&1; then \
     unzip /tmp/video_codec_sdk/*.zip -d /tmp/video_codec_sdk && \
     rm /tmp/video_codec_sdk/*.zip && \
-    cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/lib/ && \
+    cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/cuda/lib64/ && \
     mkdir -p /usr/local/cuda/include/ && \
     cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ ; \
     else \
@@ -169,7 +169,7 @@ ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pyt
 
 # Update environment variables
 ENV PATH=/usr/local/bin:${PATH:-}
-ENV LD_LIBRARY_PATH=/usr/local/lib:/hostlibs:/usr/lib/aarch64-linux-gnu/:${LD_LIBRARY_PATH:-}
+ENV LD_LIBRARY_PATH=/hostlibs/all:/hostlibs/cuda:/usr/local/cuda/lib64/:${LD_LIBRARY_PATH:-}
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
 ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
@@ -201,7 +201,7 @@ RUN ldconfig && \
 # Copy NVIDIA Video Codec SDK
 COPY --from=opencv-builder /tmp/video_codec_sdk /tmp/video_codec_sdk
 RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.so 1>/dev/null 2>&1; then \
-    cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/lib/ && \
+    cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/cuda/lib64/ && \
     mkdir -p /usr/local/cuda/include/ && \
     cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ ; \
     else \
