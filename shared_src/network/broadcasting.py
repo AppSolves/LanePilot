@@ -38,7 +38,7 @@ def discover_peer(
 
 def respond_to_broadcast(
     port: int = NETWORK_CONFIG["ports"].get("udp"),
-    timeout: int = 10,
+    timeout: Optional[int] = None,
     stop_on_response: bool = False,
 ) -> Optional[str]:
     """
@@ -46,7 +46,8 @@ def respond_to_broadcast(
     """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.settimeout(timeout)
+        if timeout:
+            sock.settimeout(timeout)
         sock.bind(("", port))
 
         logger.info(f"Listening for broadcast messages on port {port}...")
