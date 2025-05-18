@@ -51,19 +51,6 @@ RUN apt-get install -y build-essential ninja-build git wget unzip pkg-config zli
     libgoogle-glog-dev libgflags-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install NVIDIA Video Codec SDK
-COPY . /tmp
-RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.zip 1>/dev/null 2>&1; then \
-    unzip /tmp/video_codec_sdk/*.zip -d /tmp/video_codec_sdk && \
-    rm /tmp/video_codec_sdk/*.zip && \
-    cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/lib/ && \
-    mkdir -p /usr/local/cuda/include/ && \
-    cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ ; \
-    else \
-    mkdir -p /tmp/video_codec_sdk && \
-    echo "No video_codec_sdk zip found, skipping NVIDIA Video Codec SDK installation." ; \
-    fi
-
 # Install libavif
 WORKDIR $HOME
 RUN git clone https://github.com/AOMediaCodec/libavif.git \
@@ -151,6 +138,19 @@ RUN pip install --no-cache-dir -U pip && \
 
 # Check NumPy version
 RUN python3 -c "import numpy; print('NumPy for build:', numpy.__version__, '| Include:', numpy.get_include())"
+
+# Install NVIDIA Video Codec SDK
+COPY . /tmp
+RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.zip 1>/dev/null 2>&1; then \
+    unzip /tmp/video_codec_sdk/*.zip -d /tmp/video_codec_sdk && \
+    rm /tmp/video_codec_sdk/*.zip && \
+    cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/lib/ && \
+    mkdir -p /usr/local/cuda/include/ && \
+    cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ ; \
+    else \
+    mkdir -p /tmp/video_codec_sdk && \
+    echo "No video_codec_sdk zip found, skipping NVIDIA Video Codec SDK installation." ; \
+    fi
 
 # Build OpenCV
 RUN pip wheel . --verbose --wheel-dir /opt/opencv-install
