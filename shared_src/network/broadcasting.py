@@ -24,6 +24,10 @@ def discover_peer(
 
         try:
             data, addr = sock.recvfrom(1024)
+            if addr[0] == NETWORK_CONFIG["ips"].get("self"):
+                logger.info(f"Received response from self {addr[0]}, ignoring.")
+                return None
+
             logger.info(f"Found peer at {addr[0]}: {data}")
 
             if data != b"P2P_BROADCAST_RES":
@@ -55,6 +59,10 @@ def respond_to_broadcast(
         try:
             while True:
                 data, addr = sock.recvfrom(1024)
+                if addr[0] == NETWORK_CONFIG["ips"].get("self"):
+                    logger.info(f"Received message from self {addr[0]}, ignoring.")
+                    continue
+
                 logger.info(f"Received message from {addr[0]}: {data}")
 
                 if data == b"P2P_BROADCAST_REQ":
@@ -68,6 +76,9 @@ def respond_to_broadcast(
                         return addr[0]
                 else:
                     logger.warning(f"Invalid message received from {addr[0]}: {data}")
+        except KeyboardInterrupt:
+            logger.info("Broadcast listener stopped by user.")
+            return None
         except Exception as e:
             logger.error(f"Error while listening for broadcast messages: {e}")
             return None
