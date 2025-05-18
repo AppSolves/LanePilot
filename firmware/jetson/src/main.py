@@ -27,7 +27,7 @@ def start_network(tcp_port: int, udp_port: int) -> None:
         tcp_port, is_server=False, server_ip=peer_ip, daemon=True
     )
     gstreamer_thread = GStreamerReceiver(
-        f"srtsrc uri=srt://0.0.0.0:{udp_port}?mode=listener&latency=1 ! queue ! tsdemux ! h264parse ! nvh264dec ! videoconvert ! appsink sync=false",
+        f'srtsrc uri="srt://0.0.0.0:{udp_port}?mode=listener&latency=1" ! queue ! tsdemux ! h264parse ! nvh264dec ! videoconvert ! appsink sync=false',
         daemon=True,
     )
     server_thread.start()
