@@ -152,104 +152,104 @@ RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.zip 1>/dev/null 
     echo "No video_codec_sdk zip found, skipping NVIDIA Video Codec SDK installation." ; \
     fi
 
-# Ensure libcuda.so is available for cudacodec (Video Codec SDK)
-RUN if [ -f /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so ]; then \
-    ln -sf /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so /usr/local/cuda/lib64/libcuda.so; \
-    else \
-    echo "ERROR: /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so not found!" && exit 1; \
-    fi
+# # Ensure libcuda.so is available for cudacodec (Video Codec SDK)
+# RUN if [ -f /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so ]; then \
+#     ln -sf /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so /usr/local/cuda/lib64/libcuda.so; \
+#     else \
+#     echo "ERROR: /usr/lib/$(uname -m)-linux-gnu/tegra/libcuda.so not found!" && exit 1; \
+#     fi
 
-# Build OpenCV
-RUN pip wheel . --verbose --wheel-dir /opt/opencv-install
+# # Build OpenCV
+# RUN pip wheel . --verbose --wheel-dir /opt/opencv-install
 
-### Final image ###
-FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:${BASE_IMAGE_VERSION} AS base
+# ### Final image ###
+# FROM --platform=${PLATFORM} nvcr.io/nvidia/l4t-base:${BASE_IMAGE_VERSION} AS base
 
-LABEL org.opencontainers.image.authors="contact@appsolves.dev"
-LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
-LABEL org.opencontainers.image.description="An image that contains and/or mounts CUDA, CUDNN, TensorRT, PyTorch, OpenCV (Python) and GStreamer runtime dependencies."
-LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/LICENSE.md
+# LABEL org.opencontainers.image.authors="contact@appsolves.dev"
+# LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
+# LABEL org.opencontainers.image.description="An image that contains and/or mounts CUDA, CUDNN, TensorRT, PyTorch, OpenCV (Python) and GStreamer runtime dependencies."
+# LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/LICENSE.md
 
-# Set default python version to 3.10
-ARG PYTHON_VERSION=3.10
-ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pytorch/torch-2.5.0a0+872d972e41.nv24.08.17622132-cp310-cp310-linux_aarch64.whl
+# # Set default python version to 3.10
+# ARG PYTHON_VERSION=3.10
+# ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pytorch/torch-2.5.0a0+872d972e41.nv24.08.17622132-cp310-cp310-linux_aarch64.whl
 
-# Update environment variables
-ENV PATH=/usr/local/bin:${PATH:-}
-ENV LD_LIBRARY_PATH=/hostlibs/all:/hostlibs/cuda:/usr/local/cuda/lib64/:${LD_LIBRARY_PATH:-}
-ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
-ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
+# # Update environment variables
+# ENV PATH=/usr/local/bin:${PATH:-}
+# ENV LD_LIBRARY_PATH=/hostlibs/all:/hostlibs/cuda:/usr/local/cuda/lib64/:${LD_LIBRARY_PATH:-}
+# ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
+# ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
-# Update dependencies
-RUN ldconfig && \
-    apt-get update -y --fix-missing && \
-    apt-get upgrade -y --fix-missing && \
-    apt-get install -y --no-install-recommends \
-    gstreamer1.0-plugins-base \
-    gstreamer1.0-plugins-good \
-    gstreamer1.0-plugins-bad \
-    gstreamer1.0-plugins-ugly \
-    gstreamer1.0-libav \
-    gstreamer1.0-tools \
-    gstreamer1.0-x \
-    gstreamer1.0-alsa \
-    gstreamer1.0-gl \
-    gstreamer1.0-pulseaudio \
-    libhdf5-103 \
-    libgoogle-glog0v5 \
-    libtesseract4 \
-    libtbb12 \
-    libatlas3-base \
-    libyuv0 \
-    iproute2 \
-    gosu \
-    python3 python3-pip
+# # Update dependencies
+# RUN ldconfig && \
+#     apt-get update -y --fix-missing && \
+#     apt-get upgrade -y --fix-missing && \
+#     apt-get install -y --no-install-recommends \
+#     gstreamer1.0-plugins-base \
+#     gstreamer1.0-plugins-good \
+#     gstreamer1.0-plugins-bad \
+#     gstreamer1.0-plugins-ugly \
+#     gstreamer1.0-libav \
+#     gstreamer1.0-tools \
+#     gstreamer1.0-x \
+#     gstreamer1.0-alsa \
+#     gstreamer1.0-gl \
+#     gstreamer1.0-pulseaudio \
+#     libhdf5-103 \
+#     libgoogle-glog0v5 \
+#     libtesseract4 \
+#     libtbb12 \
+#     libatlas3-base \
+#     libyuv0 \
+#     iproute2 \
+#     gosu \
+#     python3 python3-pip
 
-# Copy NVIDIA Video Codec SDK
-COPY --from=opencv-builder /tmp/video_codec_sdk /tmp/video_codec_sdk
-RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.so 1>/dev/null 2>&1; then \
-    cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/cuda/lib64/ && \
-    mkdir -p /usr/local/cuda/include/ && \
-    cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ ; \
-    else \
-    echo "No video_codec_sdk zip found, skipping NVIDIA Video Codec SDK installation." ; \
-    fi
+# # Copy NVIDIA Video Codec SDK
+# COPY --from=opencv-builder /tmp/video_codec_sdk /tmp/video_codec_sdk
+# RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.so 1>/dev/null 2>&1; then \
+#     cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/cuda/lib64/ && \
+#     mkdir -p /usr/local/cuda/include/ && \
+#     cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ ; \
+#     else \
+#     echo "No video_codec_sdk zip found, skipping NVIDIA Video Codec SDK installation." ; \
+#     fi
 
-# Copy libavif
-COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
+# # Copy libavif
+# COPY --from=opencv-builder /usr/local/lib/libavif* /usr/local/lib/
 
-# Copy OpenCV and python bindings
-COPY --from=opencv-builder /opt/opencv-install /opt/opencv-install
-WORKDIR /
-RUN pip install --no-cache-dir -U pip && \
-    opencv_wheel=$(ls /opt/opencv-install/opencv_contrib_python_headless-*.whl | head -n1) && \
-    pip install --force-reinstall --upgrade --no-cache-dir "$opencv_wheel" && \
-    rm -rf /opt/opencv-install
+# # Copy OpenCV and python bindings
+# COPY --from=opencv-builder /opt/opencv-install /opt/opencv-install
+# WORKDIR /
+# RUN pip install --no-cache-dir -U pip && \
+#     opencv_wheel=$(ls /opt/opencv-install/opencv_contrib_python_headless-*.whl | head -n1) && \
+#     pip install --force-reinstall --upgrade --no-cache-dir "$opencv_wheel" && \
+#     rm -rf /opt/opencv-install
 
-# Install PyTorch
-RUN pip install --no-cache-dir -U ${TORCH_INSTALL}
+# # Install PyTorch
+# RUN pip install --no-cache-dir -U ${TORCH_INSTALL}
 
-# Copy root files
-COPY --from=root /LICENSE.md /LICENSE.md
+# # Copy root files
+# COPY --from=root /LICENSE.md /LICENSE.md
 
-# Clean up
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# # Clean up
+# RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Remove headers, static libs, pkgconfig, docs and other dev stuff to save space
-RUN rm -rf /usr/local/include \
-    /usr/local/lib/*.a \
-    /usr/local/lib/*.la \
-    /usr/local/lib/*.cmake \
-    /usr/local/lib/pkgconfig \
-    /usr/local/lib/cmake \
-    /usr/local/share \
-    /usr/local/doc
+# # Remove headers, static libs, pkgconfig, docs and other dev stuff to save space
+# RUN rm -rf /usr/local/include \
+#     /usr/local/lib/*.a \
+#     /usr/local/lib/*.la \
+#     /usr/local/lib/*.cmake \
+#     /usr/local/lib/pkgconfig \
+#     /usr/local/lib/cmake \
+#     /usr/local/share \
+#     /usr/local/doc
 
-# Strip binaries to reduce size
-RUN find /usr/local -type f -executable ! -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
+# # Strip binaries to reduce size
+# RUN find /usr/local -type f -executable ! -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
 
-# Remove pip cache and __pycache__
-RUN rm -rf /root/.cache /root/.pip /usr/local/lib/python*/dist-packages/*/__pycache__
+# # Remove pip cache and __pycache__
+# RUN rm -rf /root/.cache /root/.pip /usr/local/lib/python*/dist-packages/*/__pycache__
 
-# Set the default command to run when starting the container
-CMD ["python3", "-c", "import cv2; print(cv2.getBuildInformation())"]
+# # Set the default command to run when starting the container
+# CMD ["python3", "-c", "import cv2; print(cv2.getBuildInformation())"]
