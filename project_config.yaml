@@ -6,5 +6,5 @@ global_assets_dir: "$ROOT_DIR/assets"
 
 environment_variables:
   logging:
-    level: "DEBUG"
+    level: "INFO"
     include_relative_paths: true
