@@ -61,14 +61,14 @@ RUN git clone https://github.com/AOMediaCodec/libavif.git \
     && rm -rf $HOME/libavif
 
 # Install cuDNN
-RUN wget https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-aarch64/cudnn-linux-aarch64-9.10.0.56_cuda12-archive.tar.xz \
-    && tar -xvf cudnn-linux-aarch64-9.10.0.56_cuda12-archive.tar.xz \
-    && cd cudnn-linux-aarch64-9.10.0.56_cuda12-archive \
+RUN wget https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-$(uname -m)/cudnn-linux-$(uname -m)-9.10.0.56_cuda12-archive.tar.xz \
+    && tar -xvf cudnn-linux-$(uname -m)-9.10.0.56_cuda12-archive.tar.xz \
+    && cd cudnn-linux-$(uname -m)-9.10.0.56_cuda12-archive \
     && cp include/cudnn*.h /usr/local/cuda/include \
     && cp lib/libcudnn* /usr/local/cuda/lib64 \
     && cd $HOME \
-    && rm -rf $HOME/cudnn-linux-aarch64-9.10.0.56_cuda12-archive \
-    && rm -rf $HOME/cudnn-linux-aarch64-9.10.0.56_cuda12-archive.tar.xz
+    && rm -rf $HOME/cudnn-linux-$(uname -m)-9.10.0.56_cuda12-archive \
+    && rm -rf $HOME/cudnn-linux-$(uname -m)-9.10.0.56_cuda12-archive.tar.xz
 
 # Clone OpenCV-Python
 WORKDIR /opt
@@ -169,7 +169,7 @@ ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pyt
 
 # Update environment variables
 ENV PATH=/usr/local/bin:${PATH:-}
-ENV LD_LIBRARY_PATH=/usr/local/lib:/hostlibs:${LD_LIBRARY_PATH:-}
+ENV LD_LIBRARY_PATH=/usr/local/lib:/hostlibs:/usr/lib/aarch64-linux-gnu/:${LD_LIBRARY_PATH:-}
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
 ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
