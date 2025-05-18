@@ -87,6 +87,13 @@ RUN git add modules/cudacodec/src/NvEncoder.cpp && git commit -m "Update cudacod
 WORKDIR /opt/opencv-python
 RUN git add opencv_contrib && git commit -m "Updated submodule pointer to latest custom version"
 
+# Make sure to build for numpy>=2.0.0
+RUN pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir -U "numpy>=2.0.0"
+
+# Check NumPy version
+RUN python3 -c "import numpy; print('NumPy for build:', numpy.__version__, '| Include:', numpy.get_include())"
+
 # Set environment variables for OpenCV build
 ENV ENABLE_CONTRIB=${OPENCV_CONTRIB}
 ENV ENABLE_HEADLESS=1
@@ -97,6 +104,7 @@ ENV CMAKE_ARGS="-D CMAKE_BUILD_TYPE=Release \
     -D CUDA_ARCH_BIN=${CUDA_COMPUTE_CAPABILITY} \
     -D CUDA_ARCH_PTX=${CUDA_COMPUTE_CAPABILITY} \
     -D WITH_CUDA=ON \
+    -D CUDA_CUDA_LIBRARY='/usr/lib/*/libcuda.so' \
     -D WITH_CUDNN=ON \
     -D CUDNN_INCLUDE_DIR='/usr/local/cuda/include' \
     -D CUDNN_LIBRARY='/usr/local/cuda/lib64/libcudnn.so' \
@@ -131,13 +139,6 @@ ENV CMAKE_ARGS="-D CMAKE_BUILD_TYPE=Release \
     -D WITH_NUMPY=ON \
     -D OPENCV_GAPI_GSTREAMER=ON \
     -D WITH_GSTREAMER=ON"
-
-# Make sure to build for numpy>=2.0.0
-RUN pip install --no-cache-dir -U pip && \
-    pip install --no-cache-dir -U "numpy>=2.0.0"
-
-# Check NumPy version
-RUN python3 -c "import numpy; print('NumPy for build:', numpy.__version__, '| Include:', numpy.get_include())"
 
 # Install NVIDIA Video Codec SDK
 COPY . /tmp
