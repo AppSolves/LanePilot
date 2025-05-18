@@ -25,7 +25,7 @@ def discover_peer(
         try:
             data, addr = sock.recvfrom(1024)
             if addr[0] == NETWORK_CONFIG["ips"].get("self"):
-                logger.info(f"Received response from self {addr[0]}, ignoring.")
+                logger.info(f"Received response from self ({addr[0]}), ignoring.")
                 return None
 
             logger.info(f"Found peer at {addr[0]}: {data}")
@@ -60,7 +60,7 @@ def respond_to_broadcast(
             while True:
                 data, addr = sock.recvfrom(1024)
                 if addr[0] == NETWORK_CONFIG["ips"].get("self"):
-                    logger.info(f"Received message from self {addr[0]}, ignoring.")
+                    logger.info(f"Received message from self ({addr[0]}), ignoring.")
                     continue
 
                 logger.info(f"Received message from {addr[0]}: {data}")
