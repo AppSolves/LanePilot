@@ -1,4 +1,4 @@
 from .core import logger
-from .gstreamer import run_gstreamer_caller
+from .gstreamer import GStreamerSender
 
-__all__ = ["run_gstreamer_caller", "logger"]
+__all__ = ["GStreamerSender", "logger"]

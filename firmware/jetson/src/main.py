@@ -3,8 +3,7 @@ import signal
 from shared_src.common import StoppableThread, run_with_retry
 from shared_src.network import NETWORK_CONFIG, ServerClient, respond_to_broadcast
 
-from .network.core import logger
-from .network.gstreamer import GStreamerReceiver
+from .network import GStreamerReceiver, logger
 
 
 def stop_threads(threads: list[StoppableThread]) -> None:
