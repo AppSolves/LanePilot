@@ -178,7 +178,7 @@ ARG TORCH_INSTALL=https://developer.download.nvidia.cn/compute/redist/jp/v61/pyt
 
 # Update environment variables
 ENV PATH=/usr/local/bin:${PATH:-}
-ENV LD_LIBRARY_PATH=/hostlibs/all:/hostlibs/cuda:/usr/local/cuda/lib64/:${LD_LIBRARY_PATH:-}
+ENV LD_LIBRARY_PATH=/hostlibs/all:/hostlibs/cuda/lib64/:/usr/local/cuda/lib64/:${LD_LIBRARY_PATH:-}
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
 ENV PYTHONPATH=/usr/local/python:${PYTHONPATH:-}
 
