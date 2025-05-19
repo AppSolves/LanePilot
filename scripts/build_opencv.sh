@@ -29,7 +29,7 @@ else
     else
       echo "🚀 Building the Jetson image..."
       cd "../firmware/jetson" || exit 1
-      docker buildx build --pull --platform linux/arm64 --build-context root=../ --build-context models=../../assets/trained_models \
+      docker buildx build --pull --platform linux/arm64 --build-context root=../../ --build-context models=../../assets/trained_models \
           -f Dockerfile.jetson \
           -t ghcr.io/appsolves/lanepilot/jetson:latest .
       if [ $? -ne 0 ]; then
