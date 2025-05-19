@@ -46,7 +46,7 @@ Release $new_version (automated $release_type update)
 
 ### Update Docker Images: ###
 > [!NOTE]
-> Pull the latest Docker images for the newest features and bug fixes.
+> Pull the latest official Docker images for the newest features and bug fixes.
 > Use the following commands to pull the latest images:
 
 - Raspberry Pi:
@@ -59,9 +59,14 @@ curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/
 curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/scripts/compose.sh | bash -s jetson
 \`\`\`
 
+> [!IMPORTANT]
+> The Jetson image (more precisely, the \`opencv_base\` image) is built **without** the NVIDIA Video Codec SDK (\`cudacodec\` support).
+> This is due to licensing issues with NVIDIA.
+> If you need \`cudacodec\` support, please follow the instructions in the \`README\` and build the image locally using the provided Dockerfile.
+
 > [!TIP]
 > It is strongly recommended to enable [SUPER MAXN mode](https://www.jetson-ai-lab.com/initial_setup_jon.html#8-unlock-super-performance) on your Jetson device.
-> This mode allows the Jetson to run at maximum performance, which is beneficial for AI workloads.
+> This mode allows the Jetson to run at *maximum* performance, which is beneficial for AI workloads.
 EOF
 )
 
