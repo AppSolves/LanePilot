@@ -7,7 +7,7 @@ from shared_src.common import Singleton, StoppableThread
 from .core import logger
 
 
-class GStreamerReceiver(StoppableThread, metaclass=Singleton):
+class GStreamerReceiver(StoppableThread):
     """
     A class that receives GStreamer data and provides a generator for frames.
     """
