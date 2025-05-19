@@ -16,6 +16,7 @@ services:
       - /dev/ttyAMA0:/dev/ttyAMA0
     cap_add:
       - NET_ADMIN
+      - NET_RAW
     logging:
       driver: "json-file"
       options:
