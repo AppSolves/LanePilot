@@ -21,7 +21,11 @@ class GStreamerReceiver(StoppableThread, metaclass=Singleton):
         """
         super().__init__(*args, **kwargs)
         self._pipeline = pipeline
-        self._cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+        timeout = kwargs.get("timeout", 3000)
+        self._cap = cv2.VideoCapture()
+        self._cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, timeout)
+        self._cap.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, timeout)
+        self._cap.open(self._pipeline, cv2.CAP_GSTREAMER)
         if not self._cap.isOpened():
             logger.error("Failed to open video stream")
             self._cap = None
