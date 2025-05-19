@@ -1,5 +1,4 @@
 import subprocess as sp
-import sys
 
 from .core import logger
 
@@ -15,6 +14,7 @@ def run_gstreamer_caller(peer_ip: str, udp_port: int, bitrate: int = 2_000_000):
     """
 
     logger.info(f"Starting GStreamer pipeline to {peer_ip}:{udp_port}")
+    encoder = "x264enc"
     try:
         return sp.run(
             [
@@ -25,7 +25,7 @@ def run_gstreamer_caller(peer_ip: str, udp_port: int, bitrate: int = 2_000_000):
                 "!",
                 "videoconvert",
                 "!",
-                "x264enc",
+                encoder,
                 "tune=zerolatency",
                 f"bitrate={bitrate}",
                 "speed-preset=ultrafast",
@@ -43,9 +43,9 @@ def run_gstreamer_caller(peer_ip: str, udp_port: int, bitrate: int = 2_000_000):
         )
     except (sp.TimeoutExpired, sp.CalledProcessError) as e:
         logger.error(f"GStreamer process timed out or failed: {e}")
-        sys.exit(1)
+        raise RuntimeError(f"GStreamer process failed: {e}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
-        sys.exit(1)
+        raise
     finally:
         logger.info("GStreamer pipeline terminated.")

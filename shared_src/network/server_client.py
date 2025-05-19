@@ -59,22 +59,39 @@ class ServerClient(StoppableThread):
         self.__listeners.remove(listener)
 
     def run(self) -> None:
-        while self.running:
-            data = self.socket.recv_json()
-            command, value = data.get("command"), data.get("value")
+        try:
+            while self.running:
+                try:
+                    data = self.socket.recv_json(flags=zmq.NOBLOCK)
+                except zmq.Again:
+                    continue  # No message, keep looping
+                except zmq.ZMQError as e:
+                    logger.error(f"{self.type} ZMQ error: {e}")
+                    raise ConnectionError(f"{self.type} connection lost: {e}")
 
-            for listener in self.__listeners:
-                listener(command, value)
+                command, value = data.get("command"), data.get("value")
 
-            if command == "exit":
-                logger.info(
-                    f"Exit command received, shutting down {self.type.lower()}."
-                )
-                break
+                for listener in self.__listeners:
+                    listener(command, value)
 
-            self.socket.send_json({"command": "status", "value": "ok"})
+                if command == "exit":
+                    logger.info(
+                        f"Exit command received, shutting down {self.type.lower()}."
+                    )
+                    break
 
-        self.dispose()
+                try:
+                    self.socket.send_json({"command": "status", "value": "ok"})
+                except zmq.ZMQError as e:
+                    logger.error(f"{self.type} failed to send response: {e}")
+                    raise ConnectionError(f"{self.type} send failed: {e}")
+
+        except Exception as e:
+            logger.error(f"{self.type} encountered an error: {e}")
+            raise  # Propagate the error for reconnect logic
+
+        finally:
+            self.dispose()
 
     def dispose(self) -> None:
         """Clean up the resources."""

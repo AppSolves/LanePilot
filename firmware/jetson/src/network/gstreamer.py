@@ -43,9 +43,15 @@ class GStreamerReceiver(StoppableThread, metaclass=Singleton):
         self.__listeners.remove(listener)
 
     def run(self) -> None:
-        for frame in self.frames:
-            for listener in self.__listeners:
-                listener(frame)
+        try:
+            for frame in self.frames:
+                for listener in self.__listeners:
+                    listener(frame)
+        except Exception as e:
+            logger.error(f"GStreamerReceiver encountered an error: {e}")
+            raise  # Propagate error for reconnect logic
+        finally:
+            self.dispose()
 
     @property
     def frames(self):
@@ -54,14 +60,13 @@ class GStreamerReceiver(StoppableThread, metaclass=Singleton):
         """
         if not self._cap:
             logger.error("Video stream is not initialized")
-            return
+            raise ConnectionError("Video stream is not initialized")
 
         while True:
             ret, frame = self._cap.read()
             if not ret:
                 logger.warning("No frame received")
-                continue
-
+                raise ConnectionError("Lost connection to video stream")
             yield frame
 
     def dispose(self):
