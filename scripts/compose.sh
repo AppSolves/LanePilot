@@ -2,13 +2,34 @@
 
 set -e
 
-if [[ "$1" != "raspberrypi" && "$1" != "jetson" ]]; then
-  echo "Usage: $0 [raspberrypi|jetson]"
+NO_UPDATE=false
+
+# Parse arguments
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --no-update|-nu)
+      NO_UPDATE=true
+      shift
+      ;;
+    raspberrypi|jetson)
+      TARGET="$1"
+      shift
+      ;;
+    *)
+      echo "Usage: $0 [--no-update|-nu] [raspberrypi|jetson]"
+      exit 1
+      ;;
+  esac
+done
+
+if [[ "$TARGET" != "raspberrypi" && "$TARGET" != "jetson" ]]; then
+  echo "Usage: $0 [--no-update|-nu] [raspberrypi|jetson]"
   exit 1
 fi
 
 # Set the URL for the remote compose.yaml
-COMPOSE_URL="https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/firmware/$1/compose.yaml"
+COMPOSE_URL="https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/firmware/$TARGET/compose.yaml"
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
@@ -22,10 +43,12 @@ if ! curl -s --head "$COMPOSE_URL" | grep "200 OK" > /dev/null; then
   exit 1
 fi
 
-echo "Pulling the latest image for $1..."
-curl -fsSL "$COMPOSE_URL" | docker compose -f - pull
+if [ "$NO_UPDATE" = false ]; then
+  echo "Pulling the latest image for $TARGET..."
+  curl -fsSL "$COMPOSE_URL" | docker compose -f - pull
+fi
 
-echo "Starting (or restarting) the $1 container..."
+echo "Starting (or restarting) the $TARGET container..."
 curl -fsSL "$COMPOSE_URL" | docker compose -f - up -d
 
-echo "✅ Done. The $1 container is running with the latest image."
+echo "✅ Done. The $TARGET container is running with the latest image."
