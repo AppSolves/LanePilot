@@ -48,7 +48,7 @@ def discover_peer(
 
                 received_hmac = data.split(b":", 1)[1]
                 expected_hmac = hmac.new(
-                    NETWORK_CONFIG["secrets"].get("handshake").encode(),
+                    NETWORK_CONFIG["vars"].get("handshake").encode(),
                     challenge,
                     hashlib.sha256,
                 ).digest()
@@ -99,7 +99,7 @@ def respond_to_broadcast(
                 if data.startswith(b"P2P_BROADCAST_REQ:"):
                     challenge = data.split(b":", 1)[1]
                     response_hmac = hmac.new(
-                        NETWORK_CONFIG["secrets"].get("handshake").encode(),
+                        NETWORK_CONFIG["vars"].get("handshake").encode(),
                         challenge,
                         hashlib.sha256,
                     ).digest()

@@ -17,7 +17,7 @@ def stop_threads(threads: list[StoppableThread]) -> None:
         thread.join()
 
 
-def start_network(tcp_port: int, udp_port: int) -> None:
+def start_network(tcp_port: int, udp_port: int, nvidia_backend: bool = False) -> None:
     peer_ip = respond_to_broadcast(port=udp_port, stop_on_response=True)
     if peer_ip is None:
         logger.error("No peer found, exiting.")
@@ -26,11 +26,13 @@ def start_network(tcp_port: int, udp_port: int) -> None:
     server_thread = ServerClient(
         tcp_port, is_server=False, server_ip=peer_ip, daemon=True
     )
+    server_thread.start()
+
+    decoder = "nvh264dec" if nvidia_backend else "avdec_h264"
     gstreamer_thread = GStreamerReceiver(
-        f'srtsrc uri="srt://0.0.0.0:{udp_port}?mode=listener&latency=1" ! queue ! tsdemux ! h264parse ! nvh264dec ! videoconvert ! appsink sync=false',
+        f'srtsrc uri="srt://0.0.0.0:{udp_port}?mode=listener&latency=1" ! queue ! tsdemux ! h264parse ! {decoder} ! videoconvert ! appsink sync=false',
         daemon=True,
     )
-    server_thread.start()
     gstreamer_thread.start()
 
     signal.signal(
@@ -44,4 +46,5 @@ if __name__ == "__main__":
     start_network(
         NETWORK_CONFIG["ports"].get("tcp"),
         NETWORK_CONFIG["ports"].get("udp"),
+        NETWORK_CONFIG["vars"].get("cudacodec_enabled"),
     )

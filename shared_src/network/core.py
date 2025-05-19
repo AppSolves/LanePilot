@@ -34,7 +34,9 @@ NETWORK_CONFIG: dict = {
         "udp": int(os.environ.get("UDP_PORT")),
         "tcp": int(os.environ.get("TCP_PORT")),
     },
-    "secrets": {
+    "vars": {
         "handshake": os.environ.get("HANDSHAKE_SECRET", "default"),
+        "cudacodec_enabled": os.environ.get("CUDA_CODEC_ENABLED", "false").lower()
+        == "true",
     },
 }
