@@ -46,7 +46,7 @@ class GStreamerReceiver(StoppableThread, metaclass=Singleton):
         """
         self.__listeners.remove(listener)
 
-    def run(self) -> None:
+    def run_with_exception_handling(self) -> None:
         try:
             for frame in self.frames:
                 for listener in self.__listeners:

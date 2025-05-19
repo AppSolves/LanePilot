@@ -1,5 +1,4 @@
 import signal
-import sys
 
 from shared_src.common import StoppableThread, run_with_retry
 from shared_src.network import NETWORK_CONFIG, ServerClient, discover_peer
@@ -13,7 +12,7 @@ def start_network(tcp_port: int, udp_port: int) -> None:
     peer_ip = discover_peer(timeout=10, port=udp_port)
     if peer_ip is None:
         logger.error("No peer found, exiting.")
-        sys.exit(1)
+        raise RuntimeError("No peer found")
 
     server_thread = ServerClient(tcp_port, daemon=True)
     gstreamer_thread = StoppableThread(
@@ -30,8 +29,13 @@ def start_network(tcp_port: int, udp_port: int) -> None:
 
     signal.signal(signal.SIGTERM, lambda _, __: server_thread.stop())
     server_thread.join()
+    gstreamer_thread.join()
     servo_manager.dispose()
-    gstreamer_thread.stop()
+
+    # After joining, check for exceptions
+    for t in [server_thread, gstreamer_thread]:
+        if hasattr(t, "exception") and t.exception:
+            raise t.exception
 
 
 if __name__ == "__main__":

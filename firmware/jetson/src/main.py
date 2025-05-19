@@ -1,5 +1,4 @@
 import signal
-import sys
 
 from shared_src.common import StoppableThread, run_with_retry
 from shared_src.network import NETWORK_CONFIG, ServerClient, respond_to_broadcast
@@ -21,7 +20,7 @@ def start_network(tcp_port: int, udp_port: int, nvidia_backend: bool = False) ->
     peer_ip = respond_to_broadcast(port=udp_port, stop_on_response=True)
     if peer_ip is None:
         logger.error("No peer found, exiting.")
-        sys.exit(1)
+        raise RuntimeError("No peer found")
 
     server_thread = ServerClient(
         tcp_port, is_server=False, server_ip=peer_ip, daemon=True
@@ -40,6 +39,11 @@ def start_network(tcp_port: int, udp_port: int, nvidia_backend: bool = False) ->
     )
     server_thread.join()
     gstreamer_thread.join()
+
+    # After joining, check for exceptions
+    for t in [server_thread, gstreamer_thread]:
+        if hasattr(t, "exception") and t.exception:
+            raise t.exception
 
 
 if __name__ == "__main__":

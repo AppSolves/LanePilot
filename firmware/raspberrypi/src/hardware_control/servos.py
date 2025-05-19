@@ -1,4 +1,5 @@
 from dynamixel_sdk import *
+
 from shared_src.common import Singleton
 
 from .core import MODULE_CONFIG, logger
@@ -124,10 +125,10 @@ class ServoManager(metaclass=Singleton):
 
         if not self.portHandler.openPort():
             logger.error("Failed to open the port")
-            sys.exit(1)
+            raise RuntimeError("Failed to open the port")
         if not self.portHandler.setBaudRate(baudrate):
             logger.error("Failed to change the baudrate")
-            sys.exit(1)
+            raise RuntimeError("Failed to change the baudrate")
 
         if broadcast_add:
             self.broadcast_add()

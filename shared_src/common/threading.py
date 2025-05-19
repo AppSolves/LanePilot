@@ -1,4 +1,5 @@
 import threading
+from typing import final
 
 
 class StoppableThread(threading.Thread):
@@ -8,6 +9,7 @@ class StoppableThread(threading.Thread):
         super().__init__(*args, **kwargs)
         self.__stop_event = threading.Event()
 
+    @final
     def stop(self):
         """Stop the thread."""
         self.__stop_event.set()
@@ -16,3 +18,14 @@ class StoppableThread(threading.Thread):
     def running(self):
         """Check if the thread is running."""
         return not self.__stop_event.is_set()
+
+    @final
+    def run(self):
+        try:
+            self.run_with_exception_handling()
+        except Exception as e:
+            self.exception = e
+
+    def run_with_exception_handling(self):
+        """Override this in subclasses instead of run()."""
+        pass

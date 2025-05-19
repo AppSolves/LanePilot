@@ -58,7 +58,7 @@ class ServerClient(StoppableThread):
         """
         self.__listeners.remove(listener)
 
-    def run(self) -> None:
+    def run_with_exception_handling(self) -> None:
         try:
             while self.running:
                 try:
