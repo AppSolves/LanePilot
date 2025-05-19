@@ -7,9 +7,9 @@ from .core import logger
 
 def run_with_retry(
     func: Callable,
+    *args,
     max_retries: int = 5,
     retry_delay_sec: int = 5,
-    *args,
     **kwargs,
 ):
     """
