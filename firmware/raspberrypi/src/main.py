@@ -31,6 +31,7 @@ def start_network(tcp_port: int, udp_port: int) -> None:
     server_thread.join()
     servo_manager.dispose()
     gstreamer_thread.stop()
+    print("NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
 
     # After joining, check for exceptions
     for t in [server_thread, gstreamer_thread]:
