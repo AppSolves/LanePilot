@@ -1,4 +1,3 @@
-import time
 from typing import Callable, Optional
 
 import zmq
@@ -18,7 +17,6 @@ class ServerClient(StoppableThread):
         *args,
         is_server: bool = True,
         server_ip: Optional[str] = None,
-        check_interval_sec: int = 30,
         **kwargs,
     ) -> None:
         """Initialize the server/client thread.
@@ -31,7 +29,6 @@ class ServerClient(StoppableThread):
         self.port = port
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
-        self.check_interval_sec = check_interval_sec
         if is_server:
             self.type = "Server"
             self.socket.bind(f"tcp://*:{self.port}")
@@ -68,19 +65,8 @@ class ServerClient(StoppableThread):
         self.__listeners.remove(listener)
 
     def run_with_exception_handling(self) -> None:
-        """Run the server/client thread."""
-
-        last_check = time.time()
         try:
             while self.running:
-                # Check if the connection is alive
-                now = time.time()
-                if now - last_check >= self.check_interval_sec:
-                    if not self._is_connection_alive():
-                        logger.error(f"{self.type} connection lost (periodic check).")
-                        break
-                    last_check = now
-
                 try:
                     data = self.socket.recv_json(flags=zmq.NOBLOCK)
                 except zmq.Again:
@@ -112,25 +98,6 @@ class ServerClient(StoppableThread):
 
         finally:
             self.dispose()
-
-    def _is_connection_alive(self) -> bool:
-        """Check if the ZeroMQ socket is still alive."""
-        try:
-            # For server: check if socket is closed
-            if self.socket.closed:
-                return False
-            # For client: try a non-blocking poll for events
-            if hasattr(self.socket, "get_monitor_socket"):
-                # If monitoring is enabled, check events
-                monitor = self.socket.get_monitor_socket()
-                if monitor.poll(0):
-                    evt = monitor.recv_multipart()
-                    if b"DISCONNECTED" in evt[0]:
-                        return False
-            return True
-        except Exception as e:
-            logger.error(f"{self.type} connection check failed: {e}")
-            return False
 
     def dispose(self) -> None:
         """Clean up the resources."""
