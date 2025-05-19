@@ -13,49 +13,29 @@ cd "$(dirname "$0")/../opencv" || exit 1
 docker buildx build --pull --platform linux/arm64 --build-context root=../ -f Dockerfile.opencv \
     -t ghcr.io/appsolves/lanepilot/opencv_base:latest .
 
-if [ $? -ne 0 ]; then
-  echo "❌ Error: Failed to build the OpenCV base image."
-  exit 1
-else
-  echo "✅ OpenCV base image built successfully."
+echo "✅ OpenCV base image built successfully."
 
-  # Check if the video_codec_sdk folder is not empty
-  if [ -d "video_codec_sdk" ] && [ "$(ls -A video_codec_sdk)" ]; then
-    # Ask the user if they want to build the jetson image too
-    read -p "Do you want to build the Jetson image as well? (y/n): " build_jetson
-    if [[ ! "$build_jetson" =~ ^[Yy]$ ]]; then
-      echo "🚫 Skipping Jetson image build."
-      exit 0
-    else
-      echo "🚀 Building the Jetson image..."
-      cd "../firmware/jetson" || exit 1
-      docker buildx build --pull --platform linux/arm64 --build-context root=../../ --build-context models=../../assets/trained_models \
-          -f Dockerfile.jetson \
-          -t ghcr.io/appsolves/lanepilot/jetson:latest .
-      if [ $? -ne 0 ]; then
-        echo "❌ Error: Failed to build the Jetson image."
-        exit 1
-      else
-        echo "✅ Jetson image built successfully."
-        exit 0
-      fi
-    fi
+# Check if the video_codec_sdk folder is not empty
+if [ -d "video_codec_sdk" ] && [ "$(ls -A video_codec_sdk)" ]; then
+  read -r -p "Do you want to build the Jetson image as well? (y/n): " build_jetson
+  if [[ "$build_jetson" =~ ^[Yy]$ ]]; then
+    echo "🚀 Building the Jetson image..."
+    cd "../firmware/jetson" || exit 1
+    docker buildx build --pull --platform linux/arm64 --build-context root=../../ --build-context models=../../assets/trained_models \
+        -f Dockerfile.jetson \
+        -t ghcr.io/appsolves/lanepilot/jetson:latest .
+    echo "✅ Jetson image built successfully."
+  else
+    echo "🚫 Skipping Jetson image build."
   fi
+  exit 0
+fi
 
-  # Ask the user if they want to push the image
-  read -p "Do you want to push the OpenCV base image to ghcr.io/appsolves/lanepilot/opencv_base:latest? (y/n): " push_image
-  if [[ ! "$push_image" =~ ^[Yy]$ ]]; then
-    echo "🚫 Skipping image push."
-    exit 0
-  fi
-
+read -r -p "Do you want to push the OpenCV base image to ghcr.io/appsolves/lanepilot/opencv_base:latest? (y/n): " push_image
+if [[ "$push_image" =~ ^[Yy]$ ]]; then
   echo "🚀 Pushing the OpenCV base image to ghcr.io/appsolves/lanepilot/opencv_base:latest"
   docker push ghcr.io/appsolves/lanepilot/opencv_base:latest
-
-  if [ $? -ne 0 ]; then
-    echo "❌ Error: Failed to push the OpenCV base image."
-    exit 1
-  else
-    echo "✅ OpenCV base image pushed successfully."
-  fi
+  echo "✅ OpenCV base image pushed successfully."
+else
+  echo "🚫 Skipping image push."
 fi
