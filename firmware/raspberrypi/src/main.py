@@ -19,7 +19,8 @@ def start_network(tcp_port: int, udp_port: int) -> None:
     gstreamer_thread.start()
 
     servo_config = MODULE_CONFIG.get("servos", {})
-    servo_manager = ServoManager(
+    servo_manager = ServoManager()
+    servo_manager.initialize(
         port=servo_config.get("uart_port"), baudrate=servo_config.get("baudrate")
     )
     server_thread.add_listener(servo_manager.on_event)

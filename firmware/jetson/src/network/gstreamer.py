@@ -2,7 +2,7 @@ from typing import Callable
 
 import cv2
 
-from shared_src.common import Singleton, StoppableThread
+from shared_src.common import StoppableThread
 
 from .core import logger
 

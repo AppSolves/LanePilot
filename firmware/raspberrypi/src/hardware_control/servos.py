@@ -118,8 +118,15 @@ class _Servo:
 
 
 class ServoManager(metaclass=Singleton):
-    def __init__(self, port: str, baudrate: int, broadcast_add: bool = True):
-        self.portHandler = PortHandler(port)
+    def initialize(self, port: str, baudrate: int, broadcast_add: bool = True):
+        """Reinitialize the servo manager with a new port and baudrate."""
+        if self.running:
+            logger.warning("ServoManager is already running.")
+            return
+
+        self.port = port
+        self.running = True
+        self.portHandler = PortHandler(self.port)
         self.packetHandler = PacketHandler(2.0)
         self.servos = {}
 
@@ -133,7 +140,9 @@ class ServoManager(metaclass=Singleton):
         if broadcast_add:
             self.broadcast_add()
 
-        logger.info(f"ServoManager initialized on port {port} with baudrate {baudrate}")
+        logger.info(
+            f"ServoManager initialized on port {self.port} with baudrate {baudrate}"
+        )
 
     def add_servo(self, id: int, type: str):
         if type not in MODULE_CONFIG.get("dynamixel", {}):
@@ -151,6 +160,8 @@ class ServoManager(metaclass=Singleton):
         for servo in self.servos.values():
             servo._toggle_torque(False)
         self.portHandler.closePort()
+        self.running = False
+        logger.info("ServoManager disposed.")
 
     def broadcast_add(self):
         """Broadcast the servo IDs to the network."""
