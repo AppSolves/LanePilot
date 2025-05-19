@@ -142,14 +142,17 @@ ENV CMAKE_ARGS="-D CMAKE_BUILD_TYPE=Release \
 # Install NVIDIA Video Codec SDK
 COPY . /tmp
 RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.zip 1>/dev/null 2>&1; then \
+    mkdir -p /usr/local/cuda/include/ && \
     unzip /tmp/video_codec_sdk/*.zip -d /tmp/video_codec_sdk && \
     rm /tmp/video_codec_sdk/*.zip && \
     cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/cuda/lib64/ && \
-    mkdir -p /usr/local/cuda/include/ && \
-    cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ ; \
+    cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ && \
+    echo "NVIDIA Video Codec SDK installed successfully." && \
+    export CUDA_CODEC_ENABLED=1 ; \
     else \
     mkdir -p /tmp/video_codec_sdk && \
-    echo "No video_codec_sdk zip found, skipping NVIDIA Video Codec SDK installation." ; \
+    echo "No video_codec_sdk zip found, skipping NVIDIA Video Codec SDK installation." && \
+    export CUDA_CODEC_ENABLED=0 ; \
     fi
 
 # Ensure that the NVIDIA Video Codec SDK is available
@@ -210,11 +213,15 @@ RUN ldconfig && \
 # Copy NVIDIA Video Codec SDK
 COPY --from=opencv-builder /tmp/video_codec_sdk /tmp/video_codec_sdk
 RUN if [ -d /tmp/video_codec_sdk ] && ls /tmp/video_codec_sdk/*.so 1>/dev/null 2>&1; then \
-    cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/cuda/lib64/ && \
     mkdir -p /usr/local/cuda/include/ && \
-    cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ ; \
+    mkdir -p /usr/local/cuda/lib64/ && \
+    cp -rf /tmp/video_codec_sdk/*/Lib/linux/stubs/$(uname -m)/*.so /usr/local/cuda/lib64/ && \
+    cp -rf /tmp/video_codec_sdk/*/Interface/*.h /usr/local/cuda/include/ && \
+    echo "NVIDIA Video Codec SDK installed successfully." && \
+    export CUDA_CODEC_ENABLED=1 ; \
     else \
     echo "No video_codec_sdk zip found, skipping NVIDIA Video Codec SDK installation." ; \
+    export CUDA_CODEC_ENABLED=0 ; \
     fi
 
 # Copy libavif
