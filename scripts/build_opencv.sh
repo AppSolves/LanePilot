@@ -25,6 +25,7 @@ else
     read -p "Do you want to build the Jetson image as well? (y/n): " build_jetson
     if [[ ! "$build_jetson" =~ ^[Yy]$ ]]; then
       echo "🚫 Skipping Jetson image build."
+      exit 0
     else
       echo "🚀 Building the Jetson image..."
       docker buildx build --pull --platform linux/arm64 --build-context root=../ --build-context models=../../assets/trained_models \
