@@ -25,9 +25,9 @@ def start_network(tcp_port: int, udp_port: int) -> None:
     server_thread.add_listener(servo_manager.on_event)
 
     signal.signal(signal.SIGTERM, lambda _, __: server_thread.stop())
-    server_thread.join()
+    gstreamer_thread.join()
+    server_thread.stop()
     servo_manager.dispose()
-    gstreamer_thread.stop()
 
     # After joining, check for exceptions
     for t in [server_thread, gstreamer_thread]:

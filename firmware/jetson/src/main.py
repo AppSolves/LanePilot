@@ -36,8 +36,8 @@ def start_network(tcp_port: int, udp_port: int, nvidia_backend: bool = False) ->
     signal.signal(
         signal.SIGTERM, lambda _, __: stop_threads([server_thread, gstreamer_thread])
     )
-    server_thread.join()
     gstreamer_thread.join()
+    server_thread.stop()
 
     # After joining, check for exceptions
     for t in [server_thread, gstreamer_thread]:
