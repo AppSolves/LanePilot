@@ -4,7 +4,8 @@ import sys
 from .core import logger
 
 
-def run_gstreamer_caller(peer_ip: str, udp_port: int):
+# TODO: Currently only implemented for software encoding. Implement hardware encoding in the future.
+def run_gstreamer_caller(peer_ip: str, udp_port: int, bitrate: int = 2_000_000):
     """
     Run GStreamer pipeline to stream video from the Raspberry Pi camera to a peer using SRT.
 
@@ -26,7 +27,7 @@ def run_gstreamer_caller(peer_ip: str, udp_port: int):
                 "!",
                 "x264enc",
                 "tune=zerolatency",
-                "bitrate=5000",
+                f"bitrate={bitrate}",
                 "speed-preset=ultrafast",
                 "!",
                 "video/x-h264,profile=main",
