@@ -118,30 +118,32 @@ class _Servo:
 
 
 class ServoManager(metaclass=Singleton):
-    def initialize(self, port: str, baudrate: int, broadcast_add: bool = True):
-        """Reinitialize the servo manager with a new port and baudrate."""
-        if self.running:
-            logger.warning("ServoManager is already running.")
-            return
-
+    def __init__(self, port: str, baudrate: int, broadcast_add: bool = True):
         self.port = port
-        self.running = True
+        self.baudrate = baudrate
+        self._broadcast_add = broadcast_add
         self.portHandler = PortHandler(self.port)
         self.packetHandler = PacketHandler(2.0)
         self.servos = {}
+        self.try_reinit()
+
+    def try_reinit(self):
+        """Try to reinitialize the port and baudrate."""
+        if self.portHandler.isOpen():
+            return
 
         if not self.portHandler.openPort():
             logger.error("Failed to open the port")
             raise RuntimeError("Failed to open the port")
-        if not self.portHandler.setBaudRate(baudrate):
+        if not self.portHandler.setBaudRate(self.baudrate):
             logger.error("Failed to change the baudrate")
             raise RuntimeError("Failed to change the baudrate")
 
-        if broadcast_add:
+        if self._broadcast_add:
             self.broadcast_add()
 
         logger.info(
-            f"ServoManager initialized on port {self.port} with baudrate {baudrate}"
+            f"ServoManager initialized on port {self.port} with baudrate {self.baudrate}"
         )
 
     def add_servo(self, id: int, type: str):
@@ -160,8 +162,6 @@ class ServoManager(metaclass=Singleton):
         for servo in self.servos.values():
             servo._toggle_torque(False)
         self.portHandler.closePort()
-        self.running = False
-        logger.info("ServoManager disposed.")
 
     def broadcast_add(self):
         """Broadcast the servo IDs to the network."""
