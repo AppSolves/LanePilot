@@ -28,6 +28,7 @@ else
       exit 0
     else
       echo "🚀 Building the Jetson image..."
+      cd "$(dirname "$0")/../firmware/jetson" || exit 1
       docker buildx build --pull --platform linux/arm64 --build-context root=../ --build-context models=../../assets/trained_models \
           -f Dockerfile.jetson \
           -t ghcr.io/appsolves/lanepilot/jetson:latest .
