@@ -1,5 +1,6 @@
 import hashlib
 from pathlib import Path
+from typing import Optional
 
 import yaml
 from dotenv import load_dotenv
@@ -91,6 +92,16 @@ def get_file_hash(file_path: Path, hash_algo: str = "sha256"):
 
     # Return the hex representation of the hash
     return hash_func.hexdigest()
+
+
+def get_parent_class(func) -> Optional[str]:
+    if not hasattr(func, "__qualname__"):
+        return None
+    qualname = func.__qualname__
+    parts = qualname.split(".")
+    if len(parts) > 1:
+        return parts[-2]  # This is likely the class name
+    return None
 
 
 Config._reload_global_config()

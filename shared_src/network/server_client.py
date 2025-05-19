@@ -2,7 +2,7 @@ from typing import Callable, Optional
 
 import zmq
 
-from ..common import StoppableThread
+from ..common import StoppableThread, get_parent_class
 from .core import logger
 
 
@@ -48,7 +48,9 @@ class ServerClient(StoppableThread):
         Args:
             listener: The listener to add.
         """
-        logger.info(f"Adding listener: {listener.__class__}{listener.__name__}")
+        logger.info(
+            f"Adding listener: {get_parent_class(listener)}.{listener.__name__}"
+        )
         self.__listeners.append(listener)
 
     def remove_listener(self, listener: Callable) -> None:
@@ -57,7 +59,9 @@ class ServerClient(StoppableThread):
         Args:
             listener: The listener to remove.
         """
-        logger.info(f"Removing listener: {listener.__class__}{listener.__name__}")
+        logger.info(
+            f"Removing listener: {get_parent_class(listener)}.{listener.__name__}"
+        )
         self.__listeners.remove(listener)
 
     def run_with_exception_handling(self) -> None:

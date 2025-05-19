@@ -2,7 +2,7 @@ from .handling import run_with_retry
 from .logging import get_logger
 from .metaclasses import Singleton
 from .threading import StoppableThread
-from .utils import Config, get_file_hash
+from .utils import Config, get_file_hash, get_parent_class
 
 __all__ = [
     "get_logger",
@@ -11,4 +11,5 @@ __all__ = [
     "StoppableThread",
     "Singleton",
     "run_with_retry",
+    "get_parent_class",
 ]
