@@ -1,7 +1,7 @@
 import signal
 import sys
 
-from shared_src.common import StoppableThread
+from shared_src.common import StoppableThread, run_with_retry
 from shared_src.network import NETWORK_CONFIG, ServerClient, discover_peer
 
 from .hardware_control import MODULE_CONFIG, ServoManager
@@ -35,7 +35,8 @@ def start_network(tcp_port: int, udp_port: int) -> None:
 
 
 if __name__ == "__main__":
-    start_network(
+    run_with_retry(
+        start_network,
         NETWORK_CONFIG["ports"].get("tcp"),
         NETWORK_CONFIG["ports"].get("udp"),
     )

@@ -1,7 +1,7 @@
 import signal
 import sys
 
-from shared_src.common import StoppableThread
+from shared_src.common import StoppableThread, run_with_retry
 from shared_src.network import NETWORK_CONFIG, ServerClient, respond_to_broadcast
 
 from .network.core import logger
@@ -43,7 +43,8 @@ def start_network(tcp_port: int, udp_port: int, nvidia_backend: bool = False) ->
 
 
 if __name__ == "__main__":
-    start_network(
+    run_with_retry(
+        start_network,
         NETWORK_CONFIG["ports"].get("tcp"),
         NETWORK_CONFIG["ports"].get("udp"),
         NETWORK_CONFIG["vars"].get("cudacodec_enabled"),
