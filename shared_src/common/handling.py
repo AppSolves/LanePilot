@@ -30,6 +30,9 @@ def run_with_retry(
             )
             retries += 1
             time.sleep(retry_delay_sec)
+        except KeyboardInterrupt:
+            logger.info("KeyboardInterrupt detected. Exiting...")
+            sys.exit(0)
     else:
         logger.error("Max retries reached. Exiting.")
         sys.exit(1)
