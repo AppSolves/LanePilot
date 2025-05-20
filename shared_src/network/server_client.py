@@ -9,8 +9,6 @@ from .core import logger
 class ServerClient(StoppableThread):
     """A thread that runs a ZeroMQ server/client to send and receive commands."""
 
-    __listeners: list[Callable] = []
-
     def __init__(
         self,
         port: int,
@@ -27,6 +25,7 @@ class ServerClient(StoppableThread):
         super().__init__(*args, **kwargs)
 
         self._disposed = False
+        self.__listeners: list[Callable] = []
         self.port = port
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
