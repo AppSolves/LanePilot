@@ -103,9 +103,8 @@ class ServerClient(StoppableThread):
         if self._disposed:
             return
         self._disposed = True
-        self.socket.send_json({"command": "exit", "value": "ok"})
+        self.stop()
+        self.__listeners.clear()
         self.socket.close()
         self.context.term()
-        self.__listeners.clear()
-        self.stop()
         logger.info(f"{self.type} disposed.")
