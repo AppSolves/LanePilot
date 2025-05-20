@@ -3,6 +3,7 @@ name: Build & Push Docker Images to GHCR
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 jobs:
   build-and-push:
