@@ -15,7 +15,7 @@ class _Servo:
         self.type = type
         self.portHandler = porthandler
         self.packetHandler = packetHandler
-        self.config = MODULE_CONFIG.get("dynamixel", {}).get(type, {})
+        self._config = MODULE_CONFIG.get("dynamixel", {}).get(type, {})
 
         self.set_angle(0)
 
@@ -74,22 +74,22 @@ class _Servo:
         return result
 
     def _toggle_torque(self, enable: bool) -> bool:
-        return self._write(1, self.config.get("ADDR_TORQUE_ENABLE"), int(enable))
+        return self._write(1, self._config.get("ADDR_TORQUE_ENABLE"), int(enable))
 
     @property
     def angle(self) -> int:
         """Get the current angle of the servo."""
-        result = self._read(2, self.config.get("ADDR_PRESENT_POSITION"))
+        result = self._read(2, self._config.get("ADDR_PRESENT_POSITION"))
         if result == -1:
             logger.error("Failed to read angle.")
             return -1
 
         return int(
-            (result - self.config.get("DXL_MINIMUM_POSITION_VALUE"))
+            (result - self._config.get("DXL_MINIMUM_POSITION_VALUE"))
             * 360
             / (
-                self.config.get("DXL_MAXIMUM_POSITION_VALUE")
-                - self.config.get("DXL_MINIMUM_POSITION_VALUE")
+                self._config.get("DXL_MAXIMUM_POSITION_VALUE")
+                - self._config.get("DXL_MINIMUM_POSITION_VALUE")
             )
         )
 
@@ -105,12 +105,12 @@ class _Servo:
 
         self._write(
             2,
-            self.config.get("ADDR_GOAL_POSITION"),
+            self._config.get("ADDR_GOAL_POSITION"),
             int(
                 angle
                 * (
-                    self.config.get("DXL_MAXIMUM_POSITION_VALUE")
-                    - self.config.get("DXL_MINIMUM_POSITION_VALUE")
+                    self._config.get("DXL_MAXIMUM_POSITION_VALUE")
+                    - self._config.get("DXL_MINIMUM_POSITION_VALUE")
                 )
                 / 360
             ),
@@ -125,6 +125,7 @@ class ServoManager(metaclass=Singleton):
         self.portHandler = PortHandler(self.port)
         self.packetHandler = PacketHandler(2.0)
         self.servos = {}
+        self._lane_config = MODULE_CONFIG.get("lanes", {})
         self.try_reinit()
 
     def try_reinit(self):
@@ -196,13 +197,42 @@ class ServoManager(metaclass=Singleton):
 
     def on_event(self, command: str, value: str):
         """Handle incoming commands from the server."""
+        logger.debug(f"Received command: {command} with value: {value}")
+        lane_map = self._lane_config.get("map", {})
+        turning_degree = self._lane_config.get("turning_degree", 0)
+        if not lane_map:
+            logger.error("Lane mapping not found in config.")
+            return
+
         match command:
             case "exit":
                 logger.info("Exit command received, disposing servos...")
                 self.dispose()
             case "switch":
-                from_lane, to_lane = tuple(map(int, value.split(":")))
-                pass  # TODO: Implement switch command
+                from_lane, to_lane = tuple(map(int, value.split("-->")))
+                if from_lane not in lane_map or to_lane not in lane_map:
+                    logger.error(
+                        f"Invalid lane mapping: {from_lane} or {to_lane} not found"
+                    )
+                    return
+
+                #! We suppose that the servos are connected in the same order as the lanes
+                #! This makes it easier to manage the servos
+                from_servo = self.servos.get(lane_map[from_lane])
+                to_servo = self.servos.get(lane_map[to_lane])
+                if from_servo is None or to_servo is None:
+                    logger.error(
+                        f"Invalid servo mapping: {from_servo} or {to_servo} not found"
+                    )
+                    return
+
+                direction = 1 if from_lane < to_lane else -1
+                from_servo.set_angle(turning_degree * direction)
+                to_servo.set_angle(turning_degree * direction)
+                logger.debug(
+                    f"Setting angle for {from_lane} to {turning_degree * direction}"
+                )
+                logger.info(f"Switching from lane {from_lane} to lane {to_lane}")
             case _:
                 logger.error(f"Unknown command: {command}")
                 return

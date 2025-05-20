@@ -3,6 +3,13 @@ servos:
   baudrate: 115200 # Baudrate for the serial connection
   uart_port: /dev/ttyAMA0 # UART port for the serial connection
 
+lanes:
+  turning_degree: 30 # The degree of turning for swtiching lanes
+  map:
+    left: 0 # Left lane number
+    center: 1 # Center lane number
+    right: 2 # Right lane number
+
 # The following parameters are used to configure the servos
 # The values are based on the Dynamixel protocol and may vary depending on the servo model
 
