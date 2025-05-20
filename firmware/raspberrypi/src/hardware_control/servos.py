@@ -1,6 +1,6 @@
 from dynamixel_sdk import *
 
-from shared_src.common import Singleton
+from shared_src.common import StoppableThread
 
 from .core import MODULE_CONFIG, logger
 
@@ -117,8 +117,16 @@ class _Servo:
         )
 
 
-class ServoManager(metaclass=Singleton):
-    def __init__(self, port: str, baudrate: int, broadcast_add: bool = True):
+class ServoManager(StoppableThread):
+    def __init__(
+        self,
+        port: str,
+        baudrate: int,
+        *args,
+        broadcast_add: bool = True,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
         self.port = port
         self.baudrate = baudrate
         self._broadcast_add = broadcast_add
@@ -126,12 +134,6 @@ class ServoManager(metaclass=Singleton):
         self.packetHandler = PacketHandler(2.0)
         self.servos = {}
         self._lane_config = MODULE_CONFIG.get("lanes", {})
-        self.try_reinit()
-
-    def try_reinit(self):
-        """Try to reinitialize the port and baudrate."""
-        if self.portHandler.is_open:
-            return
 
         if not self.portHandler.openPort():
             logger.error("Failed to open the port")
@@ -160,6 +162,7 @@ class ServoManager(metaclass=Singleton):
             del self.servos[id]
 
     def dispose(self):
+        self.stop()
         for servo in self.servos.values():
             servo._toggle_torque(False)
         self.portHandler.closePort()

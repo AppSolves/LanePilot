@@ -29,3 +29,15 @@ class StoppableThread(threading.Thread):
     def run_with_exception_handling(self):
         """Override this in subclasses instead of run()."""
         pass
+
+
+def stop_threads(threads: list[StoppableThread]) -> None:
+    """
+    Stops all threads in the provided list.
+    """
+    for thread in threads:
+        try:
+            thread.dispose()
+        except:
+            thread.stop()
+        thread.join()

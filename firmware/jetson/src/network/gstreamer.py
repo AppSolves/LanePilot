@@ -30,6 +30,8 @@ class GStreamerReceiver(StoppableThread):
             logger.error("Failed to open video stream")
             self._cap = None
 
+        logger.debug(f"GStreamerReceiver initialized with pipeline: {self._pipeline}")
+
     def add_listener(self, listener: Callable) -> None:
         """Add a listener, which receives commands on each event.
 

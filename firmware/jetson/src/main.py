@@ -1,18 +1,9 @@
 import signal
 
-from shared_src.common import StoppableThread, run_with_retry
+from shared_src.common import run_with_retry, stop_threads
 from shared_src.network import NETWORK_CONFIG, ServerClient, respond_to_broadcast
 
 from .network import GStreamerReceiver, logger
-
-
-def stop_threads(threads: list[StoppableThread]) -> None:
-    """
-    Stops all threads in the provided list.
-    """
-    for thread in threads:
-        thread.stop()
-        thread.join()
 
 
 def start_network(tcp_port: int, udp_port: int, nvidia_backend: bool = False) -> None:
@@ -34,10 +25,10 @@ def start_network(tcp_port: int, udp_port: int, nvidia_backend: bool = False) ->
     gstreamer_thread.start()
 
     signal.signal(
-        signal.SIGTERM, lambda _, __: stop_threads([server_thread, gstreamer_thread])
+        signal.SIGTERM, lambda _, __: stop_threads([gstreamer_thread, server_thread])
     )
     gstreamer_thread.join()
-    server_thread.stop()
+    stop_threads([gstreamer_thread, server_thread])
 
     # After joining, check for exceptions
     for t in [server_thread, gstreamer_thread]:
