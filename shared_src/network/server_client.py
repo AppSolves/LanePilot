@@ -30,10 +30,10 @@ class ServerClient(StoppableThread):
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
         if is_server:
-            self.type = "Server"
+            self.type = "ZeroMQ server"
             self.socket.bind(f"tcp://*:{self.port}")
         else:
-            self.type = "Client"
+            self.type = "ZeroMQ client"
             self.server_ip = server_ip
             if not self.server_ip:
                 raise ValueError("Server IP is required for client mode.")
@@ -72,7 +72,7 @@ class ServerClient(StoppableThread):
                 except zmq.Again:
                     continue  # No message, keep looping
                 except zmq.ZMQError as e:
-                    logger.error(f"{self.type} ZMQ error: {e}")
+                    logger.error(f"{self.type} error: {e}")
                     raise ConnectionError(f"{self.type} connection lost: {e}")
 
                 command, value = data.get("command"), data.get("value")
@@ -81,9 +81,7 @@ class ServerClient(StoppableThread):
                     listener(command, value)
 
                 if command == "exit":
-                    logger.info(
-                        f"Exit command received, shutting down {self.type.lower()}."
-                    )
+                    logger.info(f"Exit command received, shutting down {self.type}.")
                     break
 
                 try:
