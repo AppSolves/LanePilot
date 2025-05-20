@@ -201,6 +201,7 @@ class ServoManager(metaclass=Singleton):
                 logger.info("Exit command received, disposing servos...")
                 self.dispose()
             case "switch":
+                from_lane, to_lane = tuple(map(int, value.split(":")))
                 pass  # TODO: Implement switch command
             case _:
                 logger.error(f"Unknown command: {command}")
