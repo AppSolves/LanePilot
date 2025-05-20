@@ -129,7 +129,7 @@ class ServoManager(metaclass=Singleton):
 
     def try_reinit(self):
         """Try to reinitialize the port and baudrate."""
-        if self.portHandler.isOpen():
+        if self.portHandler.is_open:
             return
 
         if not self.portHandler.openPort():
