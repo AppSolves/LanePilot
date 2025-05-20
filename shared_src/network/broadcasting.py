@@ -111,9 +111,6 @@ def respond_to_broadcast(
                 else:
                     logger.warning(f"Invalid message received from {addr[0]}: {data}")
 
-        except KeyboardInterrupt:
-            logger.info("Broadcast listener stopped by user.")
-            return None
         except Exception as e:
             logger.error(f"Error while listening for broadcast messages: {e}")
             return None
