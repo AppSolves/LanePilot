@@ -26,6 +26,7 @@ class ServerClient(StoppableThread):
         """
         super().__init__(*args, **kwargs)
 
+        self._disposed = False
         self.port = port
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
@@ -99,9 +100,12 @@ class ServerClient(StoppableThread):
 
     def dispose(self) -> None:
         """Clean up the resources."""
-        self.stop()
+        if self._disposed:
+            return
+        self._disposed = True
         self.socket.send_json({"command": "exit", "value": "ok"})
         self.socket.close()
         self.context.term()
         self.__listeners.clear()
+        self.stop()
         logger.info(f"{self.type} disposed.")
