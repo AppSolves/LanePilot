@@ -14,8 +14,11 @@ services:
     network_mode: host
     group_add:
       - dialout
+      - gpio
     devices:
       - /dev/ttyAMA0:/dev/ttyAMA0
+      - /dev/gpiomem0:/dev/gpiomem0
+      - /dev/gpiochip0:/dev/gpiochip0
     cap_add:
       - NET_ADMIN
       - NET_RAW
