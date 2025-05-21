@@ -9,5 +9,6 @@
 !project_config.yaml
 !src/
 !shared_src/
+!config/
 !requirements.txt
 !entrypoint.sh

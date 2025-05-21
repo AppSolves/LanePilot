@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -e
+
+# Prevent script from being executed directly
+(return 0 2>/dev/null) || { echo "This script must be sourced, not executed."; exit 1; }
+
+# Try starting a hotspot if the device is a Raspberry Pi via nmcli
+if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
+    # Check if UART is enabled
+    source "$(dirname "$0")/uart_check.sh"
+
+    # Retrieve the wifi network interface's name(s)
+    WIFI_INTERFACES=($(ls /sys/class/net | grep ^w))
+    if [ ${#WIFI_INTERFACES[@]} -eq 0 ]; then
+        echo "[ENTRYPOINT] Warning: No wifi interfaces found. Skipping hotspot setup."
+    else
+        WIFI_DEVICE_NAME=${WIFI_INTERFACES[0]}
+        AP_INTERFACE="uap0"
+        if [ -z "$HOTSPOT_SSID" ] || [ -z "$HOTSPOT_PASSWORD" ]; then
+            echo "[ENTRYPOINT] Warning: HOTSPOT_SSID or HOTSPOT_PASSWORD not set. Skipping hotspot setup."
+        else
+            if ! iw dev | grep -q ${AP_INTERFACE}; then
+                iw dev ${WIFI_DEVICE_NAME} interface add ${AP_INTERFACE} type __ap
+                echo "[ENTRYPOINT] Virtual AP interface ${AP_INTERFACE} created."
+            else
+                echo "[ENTRYPOINT] Virtual AP interface ${AP_INTERFACE} already exists."
+            fi
+
+            nmcli device wifi hotspot ifname ${AP_INTERFACE} ssid ${HOTSPOT_SSID} password ${HOTSPOT_PASSWORD} > /dev/null 2>&1
+            echo "[ENTRYPOINT] Hotspot started on ${AP_INTERFACE} with SSID ${HOTSPOT_SSID}."
+
+            # Start the dnsmasq service
+            source "$(dirname "$0")/dns_mask.sh"
+        fi
+    fi
+else
+    echo "[ENTRYPOINT] Skipping hotspot setup for ${MODEL_TYPE}."
+fi

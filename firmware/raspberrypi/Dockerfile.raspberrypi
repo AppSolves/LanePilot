@@ -72,8 +72,8 @@ RUN --mount=type=cache,target=/root/.cache/sdks \
     && rm -rf DynamixelSDK
 
 # Copy the source code into the container.
-COPY --from=root / /app
-COPY --from=display / /app/display
+COPY --from=root / .
+COPY --from=display / ./display
 COPY . .
 
 # Expose the port that the application listens on.
