@@ -74,6 +74,10 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
             if pgrep dnsmasq >/dev/null 2>&1; then
                 echo "[ENTRYPOINT] Stopping existing dnsmasq instance."
                 pkill dnsmasq
+                # Wait for dnsmasq to fully exit
+                while pgrep dnsmasq >/dev/null 2>&1; do
+                    sleep 0.1
+                done
             fi
             dnsmasq --no-daemon --address=/#/${DEVICE_STATIC_IP} > /dev/null 2>&1 &
             DNSMASQ_PID=$!
