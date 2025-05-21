@@ -71,12 +71,11 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
             echo "[ENTRYPOINT] Hotspot started on ${WIFI_DEVICE_NAME} with SSID ${HOTSPOT_SSID}."
 
             # Configure and start dnsmasq to redirect all DNS queries to DEVICE_STATIC_IP
-            echo "address=/#/${DEVICE_STATIC_IP}" > /tmp/dnsmasq-hotspot.conf
             if pgrep dnsmasq >/dev/null 2>&1; then
                 echo "[ENTRYPOINT] Stopping existing dnsmasq instance."
                 pkill dnsmasq
             fi
-            dnsmasq --no-daemon --conf-file=/tmp/dnsmasq-hotspot.conf &
+            dnsmasq --no-daemon --address=/#/${DEVICE_STATIC_IP} &
             DNSMASQ_PID=$!
             trap "echo '[ENTRYPOINT] Stopping dnsmasq...'; kill $DNSMASQ_PID 2>/dev/null" EXIT
             echo "[ENTRYPOINT] dnsmasq started, redirecting all DNS to ${DEVICE_STATIC_IP}."
