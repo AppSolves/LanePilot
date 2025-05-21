@@ -11,7 +11,11 @@ services:
       - UDP_PORT=8000
       - TCP_PORT=8001
       - HANDSHAKE_SECRET=default_password_1234 # Change this to a secure password
+      - HOTSPOT_SSID=LanePilot
+      - HOTSPOT_PASSWORD=default_password_1234 # Change this to a secure password
     network_mode: host
+    volumes:
+      - /proc/device-tree/model:/proc/device-tree/model:ro
     group_add:
       - dialout
       - gpio

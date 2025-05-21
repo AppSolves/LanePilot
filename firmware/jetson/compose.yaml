@@ -20,6 +20,7 @@ services:
     volumes:
       - /usr/lib/aarch64-linux-gnu:/hostlibs/all:ro
       - /usr/local/cuda:/hostlibs/cuda:ro
+      - /proc/device-tree/model:/proc/device-tree/model:ro
     logging:
       driver: "json-file"
       options:
