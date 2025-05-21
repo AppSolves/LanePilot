@@ -17,6 +17,7 @@ services:
     network_mode: host
     volumes:
       - /proc/device-tree/model:/proc/device-tree/model:ro
+      - /boot/firmware/config.txt:/boot/firmware/config.txt:ro
     group_add:
       - dialout
       - gpio
