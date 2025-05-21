@@ -18,6 +18,15 @@ if pgrep dnsmasq >/dev/null; then
     done
 fi
 
+# Wait for AP interface to be up
+for i in {1..20}; do
+    if ip link show "$AP_INTERFACE" | grep -q "state UP"; then
+        break
+    fi
+    echo "[ENTRYPOINT] Waiting for $AP_INTERFACE to be up..."
+    sleep 0.2
+done
+
 # Start dnsmasq for DHCP + DNS redirection (captive portal style)
 dnsmasq \
     --interface=$AP_INTERFACE \
