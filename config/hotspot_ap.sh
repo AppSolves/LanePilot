@@ -8,7 +8,7 @@ set -e
 # Try starting a hotspot if the device is a Raspberry Pi via nmcli
 if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
     # Check if UART is enabled
-    source "$(dirname "$0")/uart_check.sh"
+    source "$(dirname "$0")/config/uart_check.sh"
 
     # Retrieve the wifi network interface's name(s)
     WIFI_INTERFACES=($(ls /sys/class/net | grep ^w))
@@ -31,7 +31,7 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
             echo "[ENTRYPOINT] Hotspot started on ${AP_INTERFACE} with SSID ${HOTSPOT_SSID}."
 
             # Start the dnsmasq service
-            source "$(dirname "$0")/dns_mask.sh"
+            source "$(dirname "$0")/config/dns_mask.sh"
         fi
     fi
 else
