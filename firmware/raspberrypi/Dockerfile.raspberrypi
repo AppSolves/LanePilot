@@ -64,7 +64,6 @@ RUN apt-get install -y --no-install-recommends \
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     pip install --upgrade pip \
-    && pip install --upgrade gpiozero RPi.GPIO \
     && pip install -r requirements.txt
 
 # Clone Dynamixel SDK from GitHub and install it.
