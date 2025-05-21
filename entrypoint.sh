@@ -2,11 +2,21 @@
 
 set -e
 
+# Determine the model file path
+if [ -f /proc/device-tree/model ]; then
+    MODEL_PATH="/proc/device-tree/model"
+elif [ -f /host/device-model ]; then
+    MODEL_PATH="/host/device-model"
+else
+    echo "[ENTRYPOINT] Error: No device model file found. Exiting." >&2
+    exit 1
+fi
+
 # Check whether the script is running on a Raspberry Pi or Jetson
-if grep -q "Raspberry Pi" /host/device-model; then
+if grep -q "Raspberry Pi" /"$MODEL_PATH"; then
     echo "[ENTRYPOINT] Running on Raspberry Pi."
     MODEL_TYPE="Raspberry Pi"
-elif grep -q "NVIDIA Jetson" /host/device-model; then
+elif grep -q "NVIDIA Jetson" "$MODEL_PATH"; then
     echo "[ENTRYPOINT] Running on NVIDIA Jetson."
     MODEL_TYPE="NVIDIA Jetson"
 else
