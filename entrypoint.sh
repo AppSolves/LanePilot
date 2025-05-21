@@ -75,14 +75,16 @@ else
     echo "[ENTRYPOINT] Skipping hotspot setup for ${MODEL_TYPE}."
 fi
 
-# Start the main application as "appuser"
-echo "[ENTRYPOINT] Starting main application..."
+# Start the main application as specified user (default: appuser)
+APP_USER="${1:-appuser}"
+shift
+echo "[ENTRYPOINT] Starting main application as user: $APP_USER..."
 if command -v gosu >/dev/null 2>&1; then
-    exec gosu appuser "$@"
+    exec gosu "$APP_USER" "$@"
 elif command -v sudo >/dev/null 2>&1; then
     echo "[ENTRYPOINT] gosu not found, falling back to sudo."
-    exec sudo -u appuser "$@"
+    exec sudo -u "$APP_USER" "$@"
 else
-    echo "[ENTRYPOINT] Error: Neither 'gosu' nor 'sudo' found. Cannot start application as appuser." >&2
+    echo "[ENTRYPOINT] Error: Neither 'gosu' nor 'sudo' found. Cannot start application as $APP_USER." >&2
     exit 1
 fi

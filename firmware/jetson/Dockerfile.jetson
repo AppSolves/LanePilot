@@ -57,5 +57,5 @@ EXPOSE ${ZMQ_PORT}/tcp
 RUN chmod +x /app/entrypoint.sh
 
 # Run the application.
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh", "appuser"]
 CMD ["python3", "-m", "src.main"]
