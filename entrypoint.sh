@@ -77,4 +77,12 @@ fi
 
 # Start the main application as "appuser"
 echo "[ENTRYPOINT] Starting main application..."
-exec gosu appuser "$@"
+if command -v gosu >/dev/null 2>&1; then
+    exec gosu appuser "$@"
+elif command -v sudo >/dev/null 2>&1; then
+    echo "[ENTRYPOINT] gosu not found, falling back to sudo."
+    exec sudo -u appuser "$@"
+else
+    echo "[ENTRYPOINT] Error: Neither 'gosu' nor 'sudo' found. Cannot start application as appuser." >&2
+    exit 1
+fi
