@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Prevent script from being executed directly
 (return 0 2>/dev/null) || { echo "This script must be sourced, not executed."; exit 1; }
 
