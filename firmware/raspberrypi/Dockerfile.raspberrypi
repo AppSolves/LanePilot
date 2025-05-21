@@ -57,6 +57,7 @@ RUN apt-get install -y --no-install-recommends \
     gstreamer1.0-pulseaudio \
     iproute2 \
     iw \
+    iptables \
     hostapd \
     dnsmasq \
     gosu \
