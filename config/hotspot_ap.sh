@@ -36,6 +36,8 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
             ip addr add "$HOTSPOT_IP/24" dev "$AP_INTERFACE"
             echo "[ENTRYPOINT] IP address $HOTSPOT_IP/24 set on $AP_INTERFACE."
 
+            sleep 1
+
             echo "[ENTRYPOINT] Starting hostapd for $AP_INTERFACE without config file..."
 
             hostapd -B /dev/stdin <<EOF
