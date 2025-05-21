@@ -16,7 +16,7 @@ def start_network(zmq_port: int, gstreamer_port: int) -> None:
     server_thread = ServerClient(zmq_port, daemon=True)
     server_thread.start()
     gstreamer_thread = GStreamerSender(
-        peer_ip=peer_ip, gstreamer_port=gstreamer_port, daemon=True
+        peer_ip=peer_ip, port=gstreamer_port, daemon=True
     )
     gstreamer_thread.start()
 

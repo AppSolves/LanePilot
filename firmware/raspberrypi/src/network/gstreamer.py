@@ -9,14 +9,14 @@ class GStreamerSender(StoppableThread):
     def __init__(
         self,
         peer_ip: str,
-        gstreamer_port: int,
+        port: int,
         bitrate: int = 2_000_000,
         encoder: str = "x264enc",
         **kwargs,
     ):
         super().__init__(**kwargs)
         self._peer_ip = peer_ip
-        self._gstreamer_port = gstreamer_port
+        self._port = port
         self._bitrate = bitrate
         self._encoder = encoder
 
@@ -28,9 +28,7 @@ class GStreamerSender(StoppableThread):
         Run GStreamer pipeline to stream video from the Raspberry Pi camera to a peer using SRT.
         """
 
-        logger.info(
-            f"Starting GStreamer pipeline to {self._peer_ip}:{self._gstreamer_port}"
-        )
+        logger.info(f"Starting GStreamer pipeline to {self._peer_ip}:{self._port}")
         try:
             sp.run(
                 [
@@ -53,7 +51,7 @@ class GStreamerSender(StoppableThread):
                     "mpegtsmux",
                     "!",
                     "srtsink",
-                    f'uri="srt://{self._peer_ip}:{self._gstreamer_port}?mode=caller&latency=1"',
+                    f'uri="srt://{self._peer_ip}:{self._port}?mode=caller&latency=1"',
                 ],
                 check=True,
             )
