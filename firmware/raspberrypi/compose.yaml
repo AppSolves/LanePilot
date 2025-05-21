@@ -18,7 +18,7 @@ services:
       - HOTSPOT_PASSWORD=default_password_1234 # Change this to a secure password
     network_mode: host
     volumes:
-      - /proc/device-tree/model:/proc/device-tree/model:ro
+      - /proc/device-tree/model:/host/device-model:ro
       - /boot/firmware/config.txt:/boot/firmware/config.txt:ro
     group_add:
       - dialout

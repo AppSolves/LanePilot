@@ -3,10 +3,10 @@
 set -e
 
 # Check whether the script is running on a Raspberry Pi or Jetson
-if grep -q "Raspberry Pi" /proc/device-tree/model; then
+if grep -q "Raspberry Pi" /host/device-model; then
     echo "[ENTRYPOINT] Running on Raspberry Pi."
     MODEL_TYPE="Raspberry Pi"
-elif grep -q "NVIDIA Jetson" /proc/device-tree/model; then
+elif grep -q "NVIDIA Jetson" /host/device-model; then
     echo "[ENTRYPOINT] Running on NVIDIA Jetson."
     MODEL_TYPE="NVIDIA Jetson"
 else
