@@ -27,6 +27,10 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
                 echo "[ENTRYPOINT] Virtual AP interface ${AP_INTERFACE} already exists."
             fi
 
+            ip addr flush dev ${AP_INTERFACE}
+            ip link set ${AP_INTERFACE} up
+            ip addr add 192.168.10.1/24 dev ${AP_INTERFACE}
+
             nmcli device wifi hotspot ifname ${AP_INTERFACE} ssid ${HOTSPOT_SSID} password ${HOTSPOT_PASSWORD} > /dev/null
             echo "[ENTRYPOINT] Hotspot started on ${AP_INTERFACE} with SSID ${HOTSPOT_SSID}."
 
