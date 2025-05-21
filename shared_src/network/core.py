@@ -32,9 +32,9 @@ NETWORK_CONFIG: dict = {
     },
     "ports": {
         "uart": "/dev/ttyAMA0",
-        "gstreamer": int(os.environ.get("GSTREAMER_PORT")),
-        "zmq": int(os.environ.get("ZMQ_PORT")),
-        "display_server": int(os.environ.get("DISPLAY_SERVER_PORT")),
+        "gstreamer": int(os.environ.get("GSTREAMER_PORT", 0)),
+        "zmq": int(os.environ.get("ZMQ_PORT", 0)),
+        "display_server": int(os.environ.get("DISPLAY_SERVER_PORT", 0)),
     },
     "vars": {
         "handshake": os.environ.get("HANDSHAKE_SECRET", "default"),
