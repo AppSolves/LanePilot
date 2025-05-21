@@ -26,7 +26,7 @@ def discover_peer(
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             sock.settimeout(timeout)
-            sock.bind(("", 0))
+            sock.bind((self_ip, 0))
 
             challenge = os.urandom(16)
             message = b"P2P_BROADCAST_REQ:" + challenge
@@ -85,7 +85,7 @@ def respond_to_broadcast(
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if timeout:
             sock.settimeout(timeout)
-        sock.bind(("", port))
+        sock.bind((self_ip, port))
 
         logger.info(f"Listening for broadcast messages on port {port}...")
 
