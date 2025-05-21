@@ -17,15 +17,16 @@ def discover_peer(
     Listens for a response and returns the IP address of the discovered peer.
     """
     broadcast_ip = NETWORK_CONFIG["ips"].get("broadcast")
-    if not broadcast_ip:
-        logger.error("Broadcast IP not configured in NETWORK_CONFIG.")
+    self_ip = NETWORK_CONFIG["ips"].get("self")
+    if not broadcast_ip or not self_ip:
+        logger.error("Broadcast or self IP not configured in NETWORK_CONFIG.")
         return None
 
     for attempt in range(retries):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             sock.settimeout(timeout)
-            sock.bind(("", 0))
+            sock.bind((self_ip, 0))
 
             challenge = os.urandom(16)
             message = b"P2P_BROADCAST_REQ:" + challenge
@@ -36,7 +37,7 @@ def discover_peer(
                 )
 
                 data, addr = sock.recvfrom(1024)
-                if addr[0] == NETWORK_CONFIG["ips"].get("self"):
+                if addr[0] == self_ip:
                     logger.info(f"Received response from self ({addr[0]}), ignoring.")
                     return None
 
@@ -79,18 +80,19 @@ def respond_to_broadcast(
     """
     Listens for broadcast messages and responds to discovery requests.
     """
+    self_ip = NETWORK_CONFIG["ips"].get("self")
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if timeout:
             sock.settimeout(timeout)
-        sock.bind(("", port))
+        sock.bind((self_ip, port))
 
         logger.info(f"Listening for broadcast messages on port {port}...")
 
         try:
             while True:
                 data, addr = sock.recvfrom(1024)
-                if addr[0] == NETWORK_CONFIG["ips"].get("self"):
+                if addr[0] == self_ip:
                     logger.info(f"Received message from self ({addr[0]}), ignoring.")
                     continue
 
