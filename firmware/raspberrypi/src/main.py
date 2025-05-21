@@ -7,15 +7,17 @@ from .hardware_control import MODULE_CONFIG, ServoManager
 from .network import GStreamerSender, logger
 
 
-def start_network(tcp_port: int, udp_port: int) -> None:
-    peer_ip = discover_peer(timeout=10, port=udp_port)
+def start_network(zmq_port: int, gstreamer_port: int) -> None:
+    peer_ip = discover_peer(timeout=10, port=gstreamer_port)
     if peer_ip is None:
         logger.error("No peer found, exiting.")
         raise RuntimeError("No peer found")
 
-    server_thread = ServerClient(tcp_port, daemon=True)
+    server_thread = ServerClient(zmq_port, daemon=True)
     server_thread.start()
-    gstreamer_thread = GStreamerSender(peer_ip=peer_ip, udp_port=udp_port, daemon=True)
+    gstreamer_thread = GStreamerSender(
+        peer_ip=peer_ip, gstreamer_port=gstreamer_port, daemon=True
+    )
     gstreamer_thread.start()
 
     servo_config = MODULE_CONFIG.get("servos", {})
@@ -43,6 +45,6 @@ def start_network(tcp_port: int, udp_port: int) -> None:
 if __name__ == "__main__":
     run_with_retry(
         start_network,
-        NETWORK_CONFIG["ports"].get("tcp"),
-        NETWORK_CONFIG["ports"].get("udp"),
+        NETWORK_CONFIG["ports"].get("zmq"),
+        NETWORK_CONFIG["ports"].get("gstreamer"),
     )

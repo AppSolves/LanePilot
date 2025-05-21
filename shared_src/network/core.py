@@ -31,8 +31,8 @@ NETWORK_CONFIG: dict = {
     },
     "ports": {
         "uart": "/dev/ttyAMA0",
-        "udp": int(os.environ.get("UDP_PORT")),
-        "tcp": int(os.environ.get("TCP_PORT")),
+        "gstreamer": int(os.environ.get("GSTREAMER_PORT")),
+        "zmq": int(os.environ.get("ZMQ_PORT")),
     },
     "vars": {
         "handshake": os.environ.get("HANDSHAKE_SECRET", "default"),

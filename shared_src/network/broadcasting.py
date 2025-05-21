@@ -8,7 +8,7 @@ from .core import NETWORK_CONFIG, logger
 
 
 def discover_peer(
-    port: int = NETWORK_CONFIG["ports"].get("udp"),
+    port: int = NETWORK_CONFIG["ports"].get("gstreamer"),
     timeout: int = 10,
     retries: int = 3,
 ) -> Optional[str]:
@@ -72,7 +72,7 @@ def discover_peer(
 
 
 def respond_to_broadcast(
-    port: int = NETWORK_CONFIG["ports"].get("udp"),
+    port: int = NETWORK_CONFIG["ports"].get("gstreamer"),
     timeout: Optional[int] = None,
     stop_on_response: bool = False,
 ) -> Optional[str]:

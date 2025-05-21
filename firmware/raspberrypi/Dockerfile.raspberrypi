@@ -17,7 +17,7 @@ ENV PYTHONUNBUFFERED=1
 # TODO: Test whether this is needed.
 ENV PYTHONDONTWRITEBYTECODE=0
 ENV DEVICE_STATIC_IP=192.168.100.1
-ENV UDP_PORT=8000 TCP_PORT=8001
+ENV GSTREAMER_PORT=8000 ZMQ_PORT=8001
 
 WORKDIR /app
 
@@ -77,8 +77,8 @@ COPY --from=display / /app/display
 COPY . .
 
 # Expose the port that the application listens on.
-EXPOSE ${UDP_PORT}/udp
-EXPOSE ${TCP_PORT}/tcp
+EXPOSE ${GSTREAMER_PORT}/udp
+EXPOSE ${ZMQ_PORT}/tcp
 
 # Make the entrypoint script executable.
 RUN chmod +x /app/entrypoint.sh

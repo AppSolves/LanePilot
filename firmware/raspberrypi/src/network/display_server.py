@@ -1,7 +1,9 @@
 import time
 
 import cv2
-from flask import Flask, Response
+from flask import Flask, Response, redirect, url_for
+
+from shared_src.common.threading import StoppableThread
 
 app = Flask(__name__)
 
@@ -9,23 +11,17 @@ app = Flask(__name__)
 def generate_frames():
     while True:
         try:
-            # Öffne das aktuelle Bild (z. B. von einer Kamera oder einem Skript erzeugt)
-            frame = cv2.imread("latest.jpg")  # <- ersetze durch Euer Bild
+            frame = cv2.imread("latest.jpg")
             if frame is None:
                 time.sleep(0.1)
                 continue
-
-            # Kodieren als JPEG
             ret, buffer = cv2.imencode(".jpg", frame)
             frame_bytes = buffer.tobytes()
-
-            # MJPEG-Frame senden
             yield (
                 b"--frame\r\n"
                 b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
             )
-            time.sleep(0.05)  # ~20 FPS
-
+            time.sleep(0.05)
         except Exception as e:
             print("Fehler beim Laden des Bildes:", e)
             time.sleep(0.5)
@@ -33,15 +29,25 @@ def generate_frames():
 
 @app.route("/")
 def index():
-    return "🟢 MJPEG-Stream läuft: Öffne /video_feed im Browser"
+    return redirect(url_for("live_display"))
 
 
-@app.route("/video_feed")
-def video_feed():
+@app.route("/live_display")
+def live_display():
     return Response(
-        generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame"
+        generate_frames(),
+        mimetype="multipart/x-mixed-replace; boundary=frame",
     )
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+class DisplayServer(StoppableThread):
+    def __init__(self, port: int, **kwargs):
+        """
+        Initialize the DisplayServer.
+        Args:
+            **kwargs: Additional arguments to pass to the StoppableThread.
+        """
+
+        super().__init__(**kwargs)
+        self._module = __name__.split(".")[-1]
+        self._process = f"gunicorn -b 0.0.0.0:5000 {self._module}:app"

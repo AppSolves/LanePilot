@@ -8,8 +8,8 @@ services:
     image: ghcr.io/appsolves/lanepilot/jetson:latest
     environment:
       - DEVICE_STATIC_IP=192.168.100.2
-      - UDP_PORT=8000
-      - TCP_PORT=8001
+      - GSTREAMER_PORT=8000
+      - ZMQ_PORT=8001
       - HANDSHAKE_SECRET=default_password_1234 # Change this to a secure password
     network_mode: host
     cap_add:

@@ -6,20 +6,22 @@ from shared_src.network import NETWORK_CONFIG, ServerClient, respond_to_broadcas
 from .network import GStreamerReceiver, logger
 
 
-def start_network(tcp_port: int, udp_port: int, nvidia_backend: bool = False) -> None:
-    peer_ip = respond_to_broadcast(port=udp_port, stop_on_response=True)
+def start_network(
+    zmq_port: int, gstreamer_port: int, nvidia_backend: bool = False
+) -> None:
+    peer_ip = respond_to_broadcast(port=gstreamer_port, stop_on_response=True)
     if peer_ip is None:
         logger.error("No peer found, exiting.")
         raise RuntimeError("No peer found")
 
     server_thread = ServerClient(
-        tcp_port, is_server=False, server_ip=peer_ip, daemon=True
+        zmq_port, is_server=False, server_ip=peer_ip, daemon=True
     )
     server_thread.start()
 
     decoder = "nvh264dec" if nvidia_backend else "avdec_h264"
     gstreamer_thread = GStreamerReceiver(
-        f'srtsrc uri="srt://0.0.0.0:{udp_port}?mode=listener&latency=1" ! queue ! tsdemux ! h264parse ! {decoder} ! videoconvert ! appsink sync=false',
+        f'srtsrc uri="srt://0.0.0.0:{gstreamer_port}?mode=listener&latency=1" ! queue ! tsdemux ! h264parse ! {decoder} ! videoconvert ! appsink sync=false',
         daemon=True,
     )
     gstreamer_thread.start()
@@ -39,7 +41,7 @@ def start_network(tcp_port: int, udp_port: int, nvidia_backend: bool = False) ->
 if __name__ == "__main__":
     run_with_retry(
         start_network,
-        NETWORK_CONFIG["ports"].get("tcp"),
-        NETWORK_CONFIG["ports"].get("udp"),
+        NETWORK_CONFIG["ports"].get("zmq"),
+        NETWORK_CONFIG["ports"].get("gstreamer"),
         NETWORK_CONFIG["vars"].get("cudacodec_enabled"),
     )
