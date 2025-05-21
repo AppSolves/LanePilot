@@ -10,8 +10,10 @@ services:
       - DEVICE_STATIC_IP=192.168.100.1
       - GSTREAMER_PORT=8000
       - ZMQ_PORT=8001
-      - DISPLAY_SERVER_PORT=8002
       - HANDSHAKE_SECRET=default_password_1234 # Change this to a secure password
+
+      - HOTSPOT_IP=192.168.50.1
+      - DISPLAY_SERVER_PORT=8002
       - HOTSPOT_SSID=LanePilot
       - HOTSPOT_PASSWORD=default_password_1234 # Change this to a secure password
     network_mode: host

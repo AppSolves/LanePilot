@@ -5,7 +5,7 @@ set -e
 # Prevent script from being executed directly
 (return 0 2>/dev/null) || { echo "This script must be sourced, not executed."; exit 1; }
 
-# Configure and start dnsmasq to redirect all DNS queries to DEVICE_STATIC_IP
+# Configure and start dnsmasq to redirect all DNS queries to HOTSPOT_IP
 if pgrep dnsmasq >/dev/null; then
     echo "[ENTRYPOINT] Stopping existing dnsmasq instance."
     pkill dnsmasq
@@ -20,12 +20,19 @@ dnsmasq \
     --bind-interfaces \
     --except-interface=lo \
     --dhcp-range=${HOTSPOT_IP%.*}.10,${HOTSPOT_IP%.*}.50,12h \
-    --address=/#/$DEVICE_STATIC_IP \
+    --address=/#/$HOTSPOT_IP \
     --no-resolv \
     --log-queries \
     --log-dhcp \
     > /dev/null &
 DNSMASQ_PID=$!
 trap "echo '[ENTRYPOINT] Stopping dnsmasq...'; kill $DNSMASQ_PID 2>/dev/null" EXIT
-echo "[ENTRYPOINT] dnsmasq started with DHCP and DNS redirection to $DEVICE_STATIC_IP."
+
+# Check if dnsmasq started successfully
+if ! kill -0 $DNSMASQ_PID 2>/dev/null; then
+    echo "[ERROR] Failed to start dnsmasq."
+    return 1
+fi
+
+echo "[ENTRYPOINT] dnsmasq started with DHCP and DNS redirection to $HOTSPOT_IP."
 echo "[ENTRYPOINT] dnsmasq PID: $DNSMASQ_PID"
