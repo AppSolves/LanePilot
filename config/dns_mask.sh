@@ -14,7 +14,18 @@ if pgrep dnsmasq >/dev/null; then
     done
 fi
 
-dnsmasq --no-daemon --address=/#/${DEVICE_STATIC_IP} > /dev/null &
+# Start dnsmasq for DHCP + DNS redirection (captive portal style)
+dnsmasq \
+    --interface=$AP_INTERFACE \
+    --bind-interfaces \
+    --except-interface=lo \
+    --dhcp-range=${HOTSPOT_IP%.*}.10,${HOTSPOT_IP%.*}.50,12h \
+    --address=/#/$DEVICE_STATIC_IP \
+    --no-resolv \
+    --log-queries \
+    --log-dhcp \
+    > /dev/null &
 DNSMASQ_PID=$!
 trap "echo '[ENTRYPOINT] Stopping dnsmasq...'; kill $DNSMASQ_PID 2>/dev/null" EXIT
-echo "[ENTRYPOINT] dnsmasq started, redirecting all DNS to ${DEVICE_STATIC_IP}."
+echo "[ENTRYPOINT] dnsmasq started with DHCP and DNS redirection to $DEVICE_STATIC_IP."
+echo "[ENTRYPOINT] dnsmasq PID: $DNSMASQ_PID"
