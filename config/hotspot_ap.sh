@@ -54,7 +54,7 @@ wpa=2
 wpa_passphrase=$HOTSPOT_PASSWORD
 wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
-EOF
+EOF > /dev/null
 
             if [ -f "$(dirname "$0")/config/dns_mask.sh" ]; then
                 source "$(dirname "$0")/config/dns_mask.sh"
