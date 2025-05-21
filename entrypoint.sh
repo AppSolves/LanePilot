@@ -40,6 +40,21 @@ fi
 
 # Try starting a hotspot if the device is a Raspberry Pi via nmcli
 if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
+    # Check if UART is enabled
+    UART_ENABLED=false
+    if grep -q "^\[all\]" /boot/firmware/config.txt && \
+       grep -q "^dtparam=uart0=on" /boot/firmware/config.txt; then
+        UART_ENABLED=true
+    fi
+
+    if [ "$UART_ENABLED" = true ]; then
+        echo "[INTERFACE CONFIG] UART is enabled."
+    else
+        echo "[INTERFACE CONFIG] Error: UART is NOT enabled in /boot/firmware/config.txt."
+        echo "[INTERFACE CONFIG] Please enable UART via \`scripts/enable_uart.sh\` and reboot the device."
+        exit 1
+    fi
+
     # Retrieve the wifi network interface's name(s)
     WIFI_INTERFACES=($(ls /sys/class/net | grep ^w))
     if [ ${#WIFI_INTERFACES[@]} -eq 0 ]; then
