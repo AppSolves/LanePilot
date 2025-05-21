@@ -25,7 +25,10 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
                 iw dev "$WIFI_DEVICE_NAME" interface add "$AP_INTERFACE" type __ap
                 echo "[ENTRYPOINT] Virtual AP interface $AP_INTERFACE created."
             else
-                echo "[ENTRYPOINT] Virtual AP interface $AP_INTERFACE already exists."
+                echo "[ENTRYPOINT] Virtual AP interface $AP_INTERFACE already exists. Recreating..."
+                iw dev "$AP_INTERFACE" del
+                iw dev "$WIFI_DEVICE_NAME" interface add "$AP_INTERFACE" type __ap
+                echo "[ENTRYPOINT] Virtual AP interface $AP_INTERFACE recreated."
             fi
 
             ip link set "$AP_INTERFACE" up
