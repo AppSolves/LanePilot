@@ -53,6 +53,7 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
                 echo "[INTERFACE CONFIG] Error: Failed to start hotspot." >&2
                 exit 1
             fi
+            echo "[INTERFACE CONFIG] Hotspot started on ${WIFI_DEVICE_NAME} with SSID ${HOTSPOT_SSID}."
         fi
     fi
 else
