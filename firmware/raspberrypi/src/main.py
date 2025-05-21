@@ -3,7 +3,7 @@ import signal
 from shared_src.common import StoppableThread, run_with_retry, stop_threads
 from shared_src.network import NETWORK_CONFIG, ServerClient, discover_peer
 
-from .hardware_control import MODULE_CONFIG, ServoManager
+from .hardware_control import ServoManager
 from .network import DisplayServer, GStreamerSender, logger
 
 
@@ -61,4 +61,5 @@ if __name__ == "__main__":
         start_network,
         NETWORK_CONFIG["ports"].get("zmq"),
         NETWORK_CONFIG["ports"].get("gstreamer"),
+        NETWORK_CONFIG["ports"].get("display_server"),
     )
