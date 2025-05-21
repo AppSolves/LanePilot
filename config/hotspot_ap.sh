@@ -40,7 +40,7 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
 
             echo "[ENTRYPOINT] Starting hostapd for $AP_INTERFACE without config file..."
 
-            hostapd -B /dev/stdin <<EOF
+            hostapd -B /dev/stdin <<EOF > /dev/null
 interface=$AP_INTERFACE
 driver=nl80211
 ssid=$HOTSPOT_SSID
@@ -54,7 +54,7 @@ wpa=2
 wpa_passphrase=$HOTSPOT_PASSWORD
 wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
-EOF > /dev/null
+EOF
 
             if [ -f "$(dirname "$0")/config/dns_mask.sh" ]; then
                 source "$(dirname "$0")/config/dns_mask.sh"
