@@ -20,12 +20,14 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
         if [ -z "$HOTSPOT_SSID" ] || [ -z "$HOTSPOT_PASSWORD" ]; then
             echo "[ENTRYPOINT] Warning: HOTSPOT_SSID or HOTSPOT_PASSWORD not set. Skipping hotspot setup."
         else
-            if ! iw dev | grep -q ${AP_INTERFACE}; then
-                iw dev ${WIFI_DEVICE_NAME} interface add ${AP_INTERFACE} type __ap
-                echo "[ENTRYPOINT] Virtual AP interface ${AP_INTERFACE} created."
-            else
-                echo "[ENTRYPOINT] Virtual AP interface ${AP_INTERFACE} already exists."
+            # Remove uap0 if it already exists
+            if iw dev | grep -q ${AP_INTERFACE}; then
+                iw dev ${AP_INTERFACE} del
+                echo "[ENTRYPOINT] Removed existing virtual AP interface ${AP_INTERFACE}."
             fi
+
+            iw dev ${WIFI_DEVICE_NAME} interface add ${AP_INTERFACE} type __ap
+            echo "[ENTRYPOINT] Virtual AP interface ${AP_INTERFACE} created."
 
             nmcli device wifi hotspot ifname ${AP_INTERFACE} ssid ${HOTSPOT_SSID} password ${HOTSPOT_PASSWORD} > /dev/null
             echo "[ENTRYPOINT] Hotspot started on ${AP_INTERFACE} with SSID ${HOTSPOT_SSID}."
