@@ -1,0 +1,12 @@
+display_server:
+  fps: 30
+  file_name_map:
+    left: $ROOT_DIR/assets/display/left.jpg
+    right: $ROOT_DIR/assets/display/right.jpg
+    straight: $ROOT_DIR/assets/display/straight.jpg
+
+lanes:
+  map:
+    left: 0 # Left lane number
+    center: 1 # Center lane number
+    right: 2 # Right lane number

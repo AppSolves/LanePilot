@@ -1,6 +1,6 @@
 import signal
 
-from shared_src.common import run_with_retry, stop_threads
+from shared_src.common import StoppableThread, run_with_retry, stop_threads
 from shared_src.network import NETWORK_CONFIG, ServerClient, respond_to_broadcast
 
 from .network import GStreamerReceiver, logger
@@ -9,6 +9,14 @@ from .network import GStreamerReceiver, logger
 def start_network(
     zmq_port: int, gstreamer_port: int, nvidia_backend: bool = False
 ) -> None:
+    """
+    Start the network components.
+    Args:
+        zmq_port (int): The port for the ZeroMQ server.
+        gstreamer_port (int): The port for the GStreamer server.
+        nvidia_backend (bool): Flag to use NVIDIA backend for GStreamer.
+    """
+    logger.info("Starting network components...")
     peer_ip = respond_to_broadcast(port=gstreamer_port, stop_on_response=True)
     if peer_ip is None:
         logger.error("No peer found, exiting.")
@@ -26,15 +34,14 @@ def start_network(
     )
     gstreamer_thread.start()
 
-    signal.signal(
-        signal.SIGTERM, lambda _, __: stop_threads([gstreamer_thread, server_thread])
-    )
+    threads: tuple[StoppableThread, ...] = (server_thread, gstreamer_thread)
+    signal.signal(signal.SIGTERM, lambda _, __: stop_threads(threads))
     gstreamer_thread.join()
-    stop_threads([gstreamer_thread, server_thread])
+    stop_threads(threads)
 
     # After joining, check for exceptions
-    for t in [server_thread, gstreamer_thread]:
-        if hasattr(t, "exception") and t.exception:
+    for t in threads:
+        if t.exception:
             raise t.exception
 
 

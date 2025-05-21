@@ -120,20 +120,21 @@ class _Servo:
 class ServoManager(StoppableThread):
     def __init__(
         self,
-        port: str,
-        baudrate: int,
         *args,
         broadcast_add: bool = True,
+        reverse_direction: bool = False,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.port = port
-        self.baudrate = baudrate
+        self._servo_config = MODULE_CONFIG.get("servos", {})
+        self._lane_config = MODULE_CONFIG.get("lanes", {})
+        self.port = self._servo_config.get("uart_port")
+        self.baudrate = self._servo_config.get("baudrate")
         self._broadcast_add = broadcast_add
         self.portHandler = PortHandler(self.port)
         self.packetHandler = PacketHandler(2.0)
+        self.reverse_direction = reverse_direction
         self.servos = {}
-        self._lane_config = MODULE_CONFIG.get("lanes", {})
 
         if not self.portHandler.openPort():
             logger.error("Failed to open the port")
@@ -201,40 +202,44 @@ class ServoManager(StoppableThread):
     def on_event(self, command: str, value: str):
         """Handle incoming commands from the server."""
         logger.debug(f"Received command: {command} with value: {value}")
-        lane_map = self._lane_config.get("map", {})
         turning_degree = self._lane_config.get("turning_degree", 0)
-        if not lane_map:
-            logger.error("Lane mapping not found in config.")
-            return
 
         match command:
             case "exit":
                 logger.info("Exit command received, disposing servos...")
                 self.dispose()
             case "switch":
+                #! We suppose that the servos are connected in the same order as the lanes, e.g. lane 0 => servo 0
+                #! and that that the lanes are numbered from 0 to n-1 from left to right
+                #! This makes it easier to manage the servos
+
                 from_lane, to_lane = tuple(map(int, value.split("-->")))
-                if from_lane not in lane_map or to_lane not in lane_map:
+                if from_lane < 0 or to_lane < 0:
                     logger.error(
-                        f"Invalid lane mapping: {from_lane} or {to_lane} not found"
+                        f"Invalid lane mapping: Lanes {from_lane} or {to_lane} not found"
                     )
                     return
 
-                #! We suppose that the servos are connected in the same order as the lanes
-                #! This makes it easier to manage the servos
-                from_servo = self.servos.get(lane_map[from_lane])
-                to_servo = self.servos.get(lane_map[to_lane])
+                if from_lane == to_lane:
+                    logger.info(f"Already on lane {from_lane}, no action taken.")
+                    return
+
+                from_servo = self.servos.get(from_lane)
+                to_servo = self.servos.get(to_lane)
                 if from_servo is None or to_servo is None:
                     logger.error(
                         f"Invalid servo mapping: {from_servo} or {to_servo} not found"
                     )
                     return
 
-                direction = 1 if from_lane < to_lane else -1
-                from_servo.set_angle(turning_degree * direction)
-                to_servo.set_angle(turning_degree * direction)
-                logger.debug(
-                    f"Setting angle for {from_lane} to {turning_degree * direction}"
+                angle = (
+                    180 + turning_degree
+                    if ((from_lane < to_lane) ^ self.reverse_direction)
+                    else 180 - turning_degree
                 )
+                from_servo.set_angle(angle)
+                to_servo.set_angle(angle)
+                logger.debug(f"Setting angle for {from_lane} to {angle}")
                 logger.info(f"Switching from lane {from_lane} to lane {to_lane}")
             case _:
                 logger.error(f"Unknown command: {command}")

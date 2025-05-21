@@ -1,5 +1,5 @@
 import threading
-from typing import final
+from typing import Iterable, final
 
 
 class StoppableThread(threading.Thread):
@@ -8,6 +8,7 @@ class StoppableThread(threading.Thread):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__stop_event = threading.Event()
+        self.exception = None
 
     @final
     def stop(self):
@@ -31,7 +32,7 @@ class StoppableThread(threading.Thread):
         pass
 
 
-def stop_threads(threads: list[StoppableThread]) -> None:
+def stop_threads(threads: Iterable[StoppableThread]) -> None:
     """
     Stops all threads in the provided list.
     """
