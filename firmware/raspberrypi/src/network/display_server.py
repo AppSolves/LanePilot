@@ -7,7 +7,8 @@ import cv2
 import requests as req
 from flask import Flask, Response, redirect, url_for
 
-from shared_src.common.threading import StoppableThread
+from shared_src.common import StoppableThread
+from shared_src.network import NETWORK_CONFIG
 
 from .core import MODULE_CONFIG, logger
 
@@ -110,12 +111,14 @@ class DisplayServer(StoppableThread):
         super().__init__(*args, **kwargs)
         self._lane_config = MODULE_CONFIG.get("lanes", {})
         self._module = __name__.split(".")[-1]
+        self._process: Optional[sp.Popen] = None
+        self._ip = NETWORK_CONFIG["ips"].get("hotspot")
         self._port = port
 
     def run_with_exception_handling(self) -> None:
         try:
             self._process = sp.Popen(
-                f"gunicorn -b 0.0.0.0:{self._port} {self._module}:_app",
+                f"gunicorn -b {self._ip}:{self._port} {self._module}:_app",
                 shell=True,
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
@@ -154,7 +157,7 @@ class DisplayServer(StoppableThread):
                     direction = Direction.LEFT
 
                 req.get(
-                    f"http://localhost:{self._port}/set_direction/{direction.value}"
+                    f"http://{self._ip}:{self._port}/set_direction/{direction.value}"
                 )
                 logger.info(f"Switching from lane {from_lane} to lane {to_lane}")
             case _:

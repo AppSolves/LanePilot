@@ -5,6 +5,10 @@ set -e
 # Prevent script from being executed directly
 (return 0 2>/dev/null) || { echo "This script must be sourced, not executed."; exit 1; }
 
+# Redirect all incoming HTTP traffic on the AP interface to port $DISPLAY_SERVER_PORT
+iptables -t nat -A PREROUTING -i $AP_INTERFACE -p tcp --dport 80 -j REDIRECT --to-port $DISPLAY_SERVER_PORT
+iptables -t nat -A PREROUTING -i $AP_INTERFACE -p tcp --dport 443 -j REDIRECT --to-port $DISPLAY_SERVER_PORT
+
 # Configure and start dnsmasq to redirect all DNS queries to HOTSPOT_IP
 if pgrep dnsmasq >/dev/null; then
     echo "[ENTRYPOINT] Stopping existing dnsmasq instance."

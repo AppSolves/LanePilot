@@ -28,6 +28,7 @@ NETWORK_CONFIG: dict = {
     "ips": {
         "self": (__self_ip := os.environ.get("DEVICE_STATIC_IP")),
         "broadcast": _get_broadcast_addr(__self_ip),
+        "hotspot": os.environ.get("HOTSPOT_IP"),
     },
     "ports": {
         "uart": "/dev/ttyAMA0",
