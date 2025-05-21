@@ -64,7 +64,7 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
         if [ -z "$HOTSPOT_SSID" ] || [ -z "$HOTSPOT_PASSWORD" ]; then
             echo "[ENTRYPOINT] Warning: HOTSPOT_SSID or HOTSPOT_PASSWORD not set. Skipping hotspot setup."
         else
-            if ! nmcli device wifi hotspot ifname ${WIFI_DEVICE_NAME} ssid ${HOTSPOT_SSID} password ${HOTSPOT_PASSWORD}; then
+            if ! nmcli device wifi hotspot ifname ${WIFI_DEVICE_NAME} ssid ${HOTSPOT_SSID} password ${HOTSPOT_PASSWORD} > /dev/null 2>&1; then
                 echo "[ENTRYPOINT] Error: Failed to start hotspot." >&2
                 exit 1
             fi
@@ -75,7 +75,7 @@ if [ "$MODEL_TYPE" == "Raspberry Pi" ]; then
                 echo "[ENTRYPOINT] Stopping existing dnsmasq instance."
                 pkill dnsmasq
             fi
-            dnsmasq --no-daemon --address=/#/${DEVICE_STATIC_IP} &
+            dnsmasq --no-daemon --address=/#/${DEVICE_STATIC_IP} > /dev/null 2>&1 &
             DNSMASQ_PID=$!
             trap "echo '[ENTRYPOINT] Stopping dnsmasq...'; kill $DNSMASQ_PID 2>/dev/null" EXIT
             echo "[ENTRYPOINT] dnsmasq started, redirecting all DNS to ${DEVICE_STATIC_IP}."
