@@ -58,7 +58,8 @@ jobs:
       - name: Build and push Docker image for Raspberry Pi
         run: |
           cd firmware/raspberrypi
-          docker buildx build --pull --platform linux/arm64 --build-context root=../../ -f Dockerfile.raspberrypi \
+          docker buildx build --pull --platform linux/arm64 --build-context root=../../ --build-context display=../../assets/display \
+            -f Dockerfile.raspberrypi \
             -t ghcr.io/${{ steps.save-vars.outputs.repository }}/raspberrypi:latest \
             -t ghcr.io/${{ steps.save-vars.outputs.repository }}/raspberrypi:${{ github.ref_name }} .
           docker push ghcr.io/${{ steps.save-vars.outputs.repository }}/raspberrypi:latest

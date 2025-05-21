@@ -32,6 +32,8 @@ RUN adduser \
     --no-create-home \
     --uid "${UID}" \
     appuser \
+    && getent group gpio || groupadd gpio \
+    && getent group dialout || groupadd dialout \
     && usermod -aG gpio,dialout appuser \
     && chown -R appuser:appuser /app
 
@@ -71,6 +73,7 @@ RUN --mount=type=cache,target=/root/.cache/sdks \
 
 # Copy the source code into the container.
 COPY --from=root / /app
+COPY --from=display / /app/display
 COPY . .
 
 # Expose the port that the application listens on.
