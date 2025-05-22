@@ -3,7 +3,7 @@ dataset_path: $ROOT_DIR/assets/data/lane_allocation/LanePilot.lane_allocation.zi
 environment:
   seed: 42 # Random seed for reproducibility
   num_lanes: 3 # Number of lanes in the environment
-  max_vehicles_per_lane: 6 # Maximum number of vehicles per lane
+  max_vehicles_per_lane: 8 # Maximum number of vehicles per lane
   normalization_mode: z_score # Normalization method for the dataset (options: min_max, z_score)
 
 model:

@@ -50,6 +50,7 @@ def train():
     seed = environment.get("seed")
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dataset_path = Path(MODULE_CONFIG.get("dataset_path"))
     logger.debug(f"Dataset path: {dataset_path}")
@@ -69,12 +70,14 @@ def train():
 
     dataset_path = unpack_dataset(dataset_path, "lane_allocation")
     train_dataset = load_dataset_split(
-        dataset_path, DatasetSplit.TRAIN, max_distance_cm
+        dataset_path, DatasetSplit.TRAIN, device, max_distance_cm
     )
     val_dataset = load_dataset_split(
-        dataset_path, DatasetSplit.VALIDATION, max_distance_cm
+        dataset_path, DatasetSplit.VALIDATION, device, max_distance_cm
     )
-    test_dataset = load_dataset_split(dataset_path, DatasetSplit.TEST, max_distance_cm)
+    test_dataset = load_dataset_split(
+        dataset_path, DatasetSplit.TEST, device, max_distance_cm
+    )
 
     # Get class weights for the dataset
     class_counts = [0] * NUM_LANES
@@ -106,7 +109,6 @@ def train():
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = LaneAllocationGAT(
         input_dim=num_features, hidden_dim=hidden_dim, heads=num_heads
     ).to(device)
