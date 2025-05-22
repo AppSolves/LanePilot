@@ -6,6 +6,7 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
 from shared_src.data_preprocessing import build_edge_index, unpack_dataset
+from shared_src.postprocessing import export_model_to_trt
 
 from .core import MODULE_CONFIG, Config, logger
 from .early_stopping import EarlyStopping
@@ -166,7 +167,7 @@ def train():
             break
 
     # Save the model
-    logger.debug("Saving the model...")
+    logger.info("Saving the model...")
     best_model_path = early_stopping.best_model_path
     model_save_path = Path(
         Config.get("global_assets_dir"),
@@ -179,7 +180,7 @@ def train():
         best_model_path,
         model_save_path,
     )
-    logger.debug(f"Model saved to {model_save_path}")
+    logger.info(f"Model saved to {model_save_path}")
 
     # Load the best model checkpoint again and test it
     model.inference(
@@ -191,19 +192,28 @@ def train():
     logger.info(f"Accuracy on test split: {accuracy:.2f}%\n")
     logger.info("✅ Training completed successfully! 🚀")
 
-    # export_model_to_trt(
-    #     model,
-    #     dummy_input={
-    #         "x": test_dataset[0].x.to(device),
-    #         "edge_index": test_dataset[0].edge_index.to(device),
-    #     },
-    #     save_path=Path(
-    #         Config.get("global_assets_dir"),
-    #         "trained_models",
-    #         "lane_allocation",
-    #         "lane_allocation.trt",
-    #     ),
-    # )
+    # Export the model to ONNX format
+    dummy_input = (
+        torch.randn(1, test_dataset[0].x.shape[1]).to(device),
+        torch.randint(0, 1, test_dataset[0].edge_index.shape).to(device),
+    )
+    export_model_to_trt(
+        model,
+        Path(
+            Config.get("global_assets_dir"),
+            "trained_models",
+            "lane_allocation",
+            "lane_allocation.onnx",
+        ),
+        dummy_input,
+        input_names=["x", "edge_index"],
+        output_names=["output"],
+        dynamic_axes={
+            "x": {0: "num_nodes"},
+            "edge_index": {1: "num_edges"},
+            "output": {0: "num_nodes"},
+        },
+    )
 
 
 if __name__ == "__main__":

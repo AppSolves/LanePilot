@@ -85,8 +85,8 @@ def get_logger(
 
 # Check if _ROOT_LOGGER is already set
 if "_ROOT_LOGGER" not in locals():
-    _ROOT_LOGGER = get_logger(create_log_file=False)
-
+    _ROOT_LOGGER: logging.Logger = get_logger(create_log_file=False)
+    IS_DEBUG: bool = _ROOT_LOGGER.level == logging.DEBUG
 
 if not os.environ.get("GST_DEBUG"):
     os.environ["GST_DEBUG"] = str(python_to_gst_level(_ROOT_LOGGER.level))
