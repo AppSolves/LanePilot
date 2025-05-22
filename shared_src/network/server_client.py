@@ -25,19 +25,19 @@ class ServerClient(StoppableThread):
         super().__init__(*args, **kwargs)
 
         self._disposed = False
-        self.__listeners: list[Callable] = []
+        self.listeners: list[Callable] = []
         self.port = port
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REP)
+        self._context = zmq.Context()
+        self._socket = self._context.socket(zmq.REP)
         if is_server:
             self.type = "ZeroMQ server"
-            self.socket.bind(f"tcp://*:{self.port}")
+            self._socket.bind(f"tcp://*:{self.port}")
         else:
             self.type = "ZeroMQ client"
             self.server_ip = server_ip
             if not self.server_ip:
                 raise ValueError("Server IP is required for client mode.")
-            self.socket.connect(f"tcp://{self.server_ip}:{self.port}")
+            self._socket.connect(f"tcp://{self.server_ip}:{self.port}")
 
         logger.info(f"{self.type} started on port {self.port}")
         logger.info("Waiting for commands...")
@@ -51,7 +51,7 @@ class ServerClient(StoppableThread):
         logger.info(
             f"Adding listener: {get_parent_class(listener)}.{listener.__name__}"
         )
-        self.__listeners.append(listener)
+        self.listeners.append(listener)
 
     def remove_listener(self, listener: Callable) -> None:
         """Remove a listener.
@@ -62,13 +62,13 @@ class ServerClient(StoppableThread):
         logger.info(
             f"Removing listener: {get_parent_class(listener)}.{listener.__name__}"
         )
-        self.__listeners.remove(listener)
+        self.listeners.remove(listener)
 
     def run_with_exception_handling(self) -> None:
         try:
             while self.running:
                 try:
-                    data = self.socket.recv_json(flags=zmq.NOBLOCK)
+                    data = self._socket.recv_json(flags=zmq.NOBLOCK)
                 except zmq.Again:
                     continue  # No message, keep looping
                 except zmq.ZMQError as e:
@@ -77,7 +77,7 @@ class ServerClient(StoppableThread):
 
                 command, value = data.get("command"), data.get("value")
 
-                for listener in self.__listeners:
+                for listener in self.listeners:
                     listener(command, value)
 
                 if command == "exit":
@@ -85,7 +85,7 @@ class ServerClient(StoppableThread):
                     break
 
                 try:
-                    self.socket.send_json({"command": "status", "value": "ok"})
+                    self._socket.send_json({"command": "status", "value": "ok"})
                 except zmq.ZMQError as e:
                     logger.error(f"{self.type} failed to send response: {e}")
                     raise ConnectionError(f"{self.type} send failed: {e}")
@@ -103,7 +103,7 @@ class ServerClient(StoppableThread):
             return
         self._disposed = True
         self.stop()
-        self.__listeners.clear()
-        self.socket.close()
-        self.context.term()
+        self.listeners.clear()
+        self._socket.close()
+        self._context.term()
         logger.info(f"{self.type} disposed.")
