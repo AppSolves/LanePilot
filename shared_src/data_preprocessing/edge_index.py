@@ -1,23 +1,5 @@
 import torch
 
-# def build_edge_index(x, tolerance):
-#     num_vehicles = x.size(0)
-#     edge_index = []
-#     for src in range(num_vehicles):
-#         for dst in range(num_vehicles):
-#             if src != dst:
-#                 same_lane = abs(x[src][0] - x[dst][0]) < tolerance
-#                 if same_lane:
-#                     # Randomly select one of the two edges to avoid duplicates
-#                     edge_index.append([src, dst])
-
-#     if len(edge_index) == 0:
-#         edge_index = torch.empty((2, 0), dtype=torch.long)
-#     else:
-#         edge_index = torch.tensor(edge_index, dtype=torch.long).T.contiguous()
-
-#     return edge_index
-
 
 def build_edge_index(
     x: torch.Tensor,
