@@ -25,6 +25,23 @@ def python_to_gst_level(py_level: int) -> int:
         return 0  # none
 
 
+def python_to_trt_level(py_level: int) -> int:
+    if py_level >= 50:  # CRITICAL
+        return 1
+    elif py_level >= 40:
+        return 1
+    elif py_level >= 30:
+        return 2
+    elif py_level >= 20:
+        return 3
+    elif py_level >= 10:
+        return 4
+    elif py_level > 0:
+        return 5
+    else:
+        return 0
+
+
 def get_logger(
     level: Optional[int | str] = None,
     create_log_file: bool = True,
