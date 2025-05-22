@@ -11,7 +11,7 @@ from shared_src.postprocessing import export_model_to_trt
 from .core import MODULE_CONFIG, Config, logger
 from .early_stopping import EarlyStopping
 from .model import DatasetSplit, LaneAllocationGAT
-from .vehicle_state import NUM_LANES
+from .vehicle_state import MAX_VEHICLES_PER_LANE, NUM_LANES
 
 
 def load_dataset_split(
@@ -195,7 +195,7 @@ def train():
     # Export the model to ONNX format
     dummy_input = (
         torch.randn(test_dataset[0].x.shape).to(device),
-        test_dataset[0].edge_index.to(device),
+        test_dataset[0].edge_index.to(device).long(),
     )
     export_model_to_trt(
         model,
@@ -212,6 +212,11 @@ def train():
             "x": {0: "num_nodes"},
             "edge_index": {1: "num_edges"},
             "output": {0: "num_nodes"},
+        },
+        shapes={
+            "min_shapes": f"x:1x{num_features},edge_index:2x1",
+            "opt_shapes": f"x:{MAX_VEHICLES_PER_LANE}x{num_features},edge_index:2x{MAX_VEHICLES_PER_LANE * 2}",
+            "max_shapes": f"x:{MAX_VEHICLES_PER_LANE ** 2}x{num_features},edge_index:2x{(MAX_VEHICLES_PER_LANE * 2) ** 2}",
         },
     )
 

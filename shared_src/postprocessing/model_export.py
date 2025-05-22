@@ -66,6 +66,7 @@ def export_model_to_trt(
     input_names: Optional[list[str]] = None,
     output_names: Optional[list[str]] = None,
     dynamic_axes: Optional[dict[str, dict[int, str]]] = None,
+    shapes: Optional[dict[str, str]] = None,
 ) -> None:
     """
     Export a PyTorch model to TensorRT format.
@@ -115,6 +116,21 @@ def export_model_to_trt(
             "--fp16",
             "--skipInference",
             "--versionCompatible",
+            (
+                f"--minShapes={shapes.get("min_shapes")}"
+                if shapes.get("min_shapes")
+                else ""
+            ),
+            (
+                f"--optShapes={shapes.get("opt_shapes")}"
+                if shapes.get("opt_shapes")
+                else ""
+            ),
+            (
+                f"--maxShapes={shapes.get("max_shapes")}"
+                if shapes.get("max_shapes")
+                else ""
+            ),
             "--verbose" if IS_DEBUG else "",
         )
 
