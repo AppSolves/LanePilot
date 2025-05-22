@@ -194,8 +194,8 @@ def train():
 
     # Export the model to ONNX format
     dummy_input = (
-        torch.randn(1, test_dataset[0].x.shape[1]).to(device),
-        torch.randint(0, 1, test_dataset[0].edge_index.shape).to(device),
+        torch.randn(test_dataset[0].x.shape).to(device),
+        test_dataset[0].edge_index.to(device),
     )
     export_model_to_trt(
         model,
