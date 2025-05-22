@@ -58,6 +58,6 @@ def build_edge_index(
         if bidirectional:
             weights = torch.cat([weights, weights], dim=0)
 
-        return edge_index, weights
+        return edge_index.long(), weights.float()
 
-    return edge_index
+    return edge_index.long()

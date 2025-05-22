@@ -24,7 +24,7 @@ optimizer:
 
 vehicle:
   height_cm: 3.25
-  max_distance_cm: 0 # Distance between vehicles
+  max_distance_cm: 0.000001 # Distance between vehicles
 
 camera:
   resolution: [640, 384] # The camera resolution is 1280x720, but since the model was trained on 640x640 images with black infill,

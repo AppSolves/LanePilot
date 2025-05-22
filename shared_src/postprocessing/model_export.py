@@ -1,3 +1,4 @@
+import os
 import warnings
 
 from shared_src.common import IS_DEBUG
@@ -89,27 +90,35 @@ def export_model_to_trt(
         if dummy_input is None:
             raise ValueError("Dummy input is required for exporting the model.")
 
-        onnx_path = save_path.with_suffix(".onnx")
-        trt_path = save_path.with_suffix(".engine")
-
         # Export the model to ONNX first
         save_path = export_model_to_onnx(
             model,
-            save_path=onnx_path,
+            save_path=save_path,
             dummy_input=dummy_input,
             input_names=input_names,
             output_names=output_names,
             dynamic_axes=dynamic_axes,
         )
 
+        onnx_path = save_path.with_suffix(".onnx")
+        trt_path = save_path.with_suffix(".engine")
+
+        # Check if ONNX file exists before running trtexec
+        if not os.path.exists(onnx_path):
+            raise FileNotFoundError(f"ONNX file not found: {onnx_path}")
+
         # Properly quote the paths for the trtexec command
         command = (
-            f'trtexec --onnx="{save_path.as_posix()}" '
-            f'--saveEngine="{trt_path.as_posix()}" '
-            f"--fp16"
+            "trtexec",
+            f"--onnx={onnx_path.as_posix()}",
+            f"--saveEngine={trt_path.as_posix()}",
+            "--fp16",
+            "--skipInference",
+            "--versionCompatible",
+            "--verbose" if IS_DEBUG else "",
         )
 
         # Run the command
-        sp.run(command, shell=True, check=True)
+        sp.run(tuple(c for c in command if c), shell=True, check=True)
 
         logger.debug(f"TensorRT model exported to '{trt_path}'!")
