@@ -72,7 +72,11 @@ def get_logger(
 
     level = level or env_vars.get("level", logging.DEBUG)
     logger = logging.getLogger(module)
-    logger.setLevel(level)
+    try:
+        logger.setLevel(level)
+    except ValueError:
+        # If the level is not a valid logging level, set it to INFO
+        logger.setLevel(logging.INFO)
     logger.propagate = False
 
     if not logger.handlers:
