@@ -11,9 +11,9 @@ from ai.lane_allocation import MODULE_CONFIG as GAT_CONFIG
 from ai.lane_allocation import LaneAllocationGAT, logger
 from ai.lane_allocation.model import DatasetSplit
 from ai.lane_allocation.train import load_dataset_split
-from ai.lane_allocation.vehicle_state import NUM_LANES
 from shared_src.common import Config
 from shared_src.data_preprocessing import unpack_dataset
+from shared_src.inference import NUM_LANES
 
 
 def plot_confusion_matrix(y_true, y_pred, classes, title=None):

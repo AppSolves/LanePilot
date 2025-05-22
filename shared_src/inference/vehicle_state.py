@@ -3,8 +3,7 @@ from datetime import datetime
 
 import torch
 
-from shared_src.data_preprocessing import NormalizationMode, normalize_data
-
+from ..data_preprocessing import NormalizationMode, normalize_data
 from .core import MODULE_CONFIG
 
 # Camera and vehicle settings

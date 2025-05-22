@@ -7,10 +7,10 @@ from ultralytics import YOLO
 
 from ai.lane_allocation import MODULE_CONFIG as GAT_CONFIG
 from ai.lane_allocation import LaneAllocationGAT
-from ai.lane_allocation.vehicle_state import NUM_LANES, VehicleState
 from ai.vehicle_detection.core import Path, logger
 from shared_src.common import Config
 from shared_src.data_preprocessing import BoxShape, box_to_polygon, build_edge_index
+from shared_src.inference import NUM_LANES, VehicleState
 
 DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CACHE_DIR: Path = Path(Config.get("global_cache_dir"), "vehicle_detection")

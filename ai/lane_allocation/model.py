@@ -8,8 +8,9 @@ from torch.nn import Linear
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import GATv2Conv
 
+from shared_src.inference import NUM_LANES
+
 from .core import logger
-from .vehicle_state import NUM_LANES
 
 
 class DatasetSplit(Enum):

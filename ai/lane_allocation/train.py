@@ -6,12 +6,12 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
 from shared_src.data_preprocessing import build_edge_index, unpack_dataset
+from shared_src.inference import MAX_VEHICLES_PER_LANE, NUM_LANES
 from shared_src.postprocessing import export_model_to_trt
 
 from .core import MODULE_CONFIG, Config, logger
 from .early_stopping import EarlyStopping
 from .model import DatasetSplit, LaneAllocationGAT
-from .vehicle_state import MAX_VEHICLES_PER_LANE, NUM_LANES
 
 
 def load_dataset_split(
