@@ -76,6 +76,8 @@ def train():
         logger.error("Best model weights not found after training.")
         raise FileNotFoundError("Best model weights not found after training.")
 
+    logger.info(f"Model saved to '{save_path}'!")
+    logger.info("Loading best model for export...")
     model = YOLO(save_path, task="segment")
     export_model_to_trt(model)
 
