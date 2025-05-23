@@ -52,11 +52,17 @@ class TensorRTInference(StoppableThread):
         if x.numel() == 0 or edge_index.numel() == 0:
             logger.error("Input arrays must not be empty.")
             raise ValueError("Input arrays must not be empty.")
+        if x.ndim != 2:
+            logger.error("x should be of shape [num_nodes, num_features]")
+            raise ValueError("x should be of shape [num_nodes, num_features]")
+        if edge_index.ndim != 2 or edge_index.shape[0] != 2:
+            logger.error("edge_index should be of shape [2, num_edges]")
+            raise ValueError("edge_index should be of shape [2, num_edges]")
 
         # Ensure tensors are on the correct device (GPU)
         x_tensor = x.to(self.device, non_blocking=True)
         edge_index_tensor = edge_index.to(self.device, non_blocking=True)
-        output_shape = (1, NUM_LANES)
+        output_shape = (x_tensor.shape[0], NUM_LANES)
         output_tensor = torch.empty(
             output_shape, dtype=torch.float32, device=self.device
         )
