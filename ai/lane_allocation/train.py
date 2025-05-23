@@ -26,7 +26,8 @@ def train():
     torch.cuda.manual_seed_all(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    dataset_path = Path(MODULE_CONFIG.get("dataset_path"))
+    dataset_config = MODULE_CONFIG.get("dataset", {})
+    dataset_path = Path(dataset_config.get("path"))
     logger.debug(f"Dataset path: {dataset_path}")
 
     if not dataset_path:

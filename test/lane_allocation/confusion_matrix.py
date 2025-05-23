@@ -7,12 +7,11 @@ import torch
 from sklearn.metrics import confusion_matrix
 from torch_geometric.loader import DataLoader
 
-from ai.lane_allocation import MODULE_CONFIG as GAT_CONFIG
 from ai.lane_allocation import LaneAllocationGAT, logger
-from ai.lane_allocation.model import DatasetSplit
-from ai.lane_allocation.train import load_dataset_split
+from ai.lane_allocation.train import DatasetSplit, load_dataset_split
 from shared_src.common import Config
 from shared_src.data_preprocessing import unpack_dataset
+from shared_src.inference import MODULE_CONFIG as GAT_CONFIG
 from shared_src.inference import NUM_LANES
 
 
@@ -95,7 +94,8 @@ def main():
         "lane_allocation",
         "lane_allocation.pt",
     )
-    dataset_path = Path(GAT_CONFIG.get("dataset_path"))
+    dataset_config = GAT_CONFIG.get("dataset", {})
+    dataset_path = Path(dataset_config.get("path"))
     dataset_path = unpack_dataset(dataset_path, "lane_allocation")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     batch_size = model_config.get("batch_size")

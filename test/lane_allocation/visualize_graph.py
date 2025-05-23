@@ -10,10 +10,9 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Patch
 from torch_geometric.data import Data
 
-from ai.lane_allocation import MODULE_CONFIG as GAT_CONFIG
-from ai.lane_allocation.model import DatasetSplit
-from ai.lane_allocation.train import load_dataset_split
+from ai.lane_allocation.train import DatasetSplit, load_dataset_split
 from shared_src.data_preprocessing import unpack_dataset
+from shared_src.inference import MODULE_CONFIG as GAT_CONFIG
 
 
 def plot_graph(index: int, data: Data, seed: int, num_lanes: int):
@@ -151,7 +150,8 @@ def main():
     torch.cuda.manual_seed_all(seed)
     rd.seed(seed)
 
-    dataset_path = Path(GAT_CONFIG.get("dataset_path"))
+    dataset_config = GAT_CONFIG.get("dataset", {})
+    dataset_path = Path(dataset_config.get("path"))
     dataset_path = unpack_dataset(dataset_path, "lane_allocation")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

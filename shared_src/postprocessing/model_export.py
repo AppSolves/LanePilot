@@ -15,14 +15,20 @@ from ultralytics import YOLO
 from .core import logger
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+try:
+    from ai.vehicle_detection import MODULE_CONFIG as INFERENCE_CONFIG
+
+    def __load_int8_calibration_data() -> Path:
+        dataset_config = INFERENCE_CONFIG.get("dataset", {})
+        dataset_path = Path(dataset_config.get("path"))
+        dataset_path = unpack_dataset(dataset_path, "vehicle_detection")
+        return Path(dataset_path, "data.yaml")
+
+except ImportError:
+    pass
+
 from shared_src.data_preprocessing import unpack_dataset
-from shared_src.inference import MODULE_CONFIG as INFERENCE_CONFIG
-
-
-def __load_int8_calibration_data() -> Path:
-    dataset_path = Path(INFERENCE_CONFIG.get("dataset_path"))
-    dataset_path = unpack_dataset(dataset_path, "vehicle_detection")
-    return Path(dataset_path, "data.yaml")
 
 
 def export_model_to_onnx(

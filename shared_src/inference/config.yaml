@@ -1,4 +1,5 @@
-dataset_path: $ROOT_DIR/assets/data/lane_allocation/LanePilot.lane_allocation.zip
+dataset:
+  path: $ROOT_DIR/assets/data/lane_allocation/LanePilot.lane_allocation.zip
 
 environment:
   seed: 42 # Random seed for reproducibility
