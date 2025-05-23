@@ -4,14 +4,20 @@ from pathlib import Path
 import cv2
 from ultralytics import YOLO
 
-from shared_src.common import Config
+from shared_src.common import Config, Singleton
 from shared_src.data_preprocessing import BoxShape, box_to_polygon
 from shared_src.inference import VehicleState
 
 from .core import logger
 
 
-class YOLOInference:
+class YOLOInference(metaclass=Singleton):
+    """
+    YOLO inference class for vehicle detection and tracking.
+    This class uses the YOLO model to perform inference on input frames and
+    maintain the state of detected vehicles.
+    """
+
     def __init__(
         self,
         model_path: Path,
@@ -81,3 +87,13 @@ class YOLOInference:
 
         self.clean_vehicle_states()
         return self.vehicle_states
+
+    def dispose(self):
+        """
+        Dispose of the YOLO model and cleanup resources.
+        """
+        if self.model:
+            del self.model
+        logger.debug("YOLO model disposed.")
+        self.vehicle_states.clear()
+        logger.debug("Vehicle states cleared.")

@@ -3,20 +3,20 @@ from pathlib import Path
 import tensorrt as trt
 import torch
 
-from shared_src.common import StoppableThread, python_to_trt_level
+from shared_src.common import Singleton, python_to_trt_level
 from shared_src.inference import NUM_LANES
 
 from .core import logger
 
 
-class GATInference(StoppableThread):
-    def __init__(
-        self,
-        engine_path: Path,
-        *args,
-        enable_host_code: bool = False,
-        **kwargs,
-    ):
+class GATInference(metaclass=Singleton):
+    """
+    GATInference class for performing inference using a TensorRT engine.
+    This class loads a TensorRT engine from a file and performs inference
+    on input data using the engine.
+    """
+
+    def __init__(self, engine_path: Path, enable_host_code: bool = False):
         # Load the TensorRT engine
         self.engine_path = engine_path
         trt_level = python_to_trt_level(logger.level)
@@ -33,7 +33,6 @@ class GATInference(StoppableThread):
 
         self.context = self.engine.create_execution_context()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        super().__init__(*args, **kwargs)
 
         logger.debug(f"Model engine loaded from {self.engine_path}")
 
@@ -87,7 +86,6 @@ class GATInference(StoppableThread):
         """
         Dispose of the TensorRT context and engine.
         """
-        self.stop()
         if self.context:
             del self.context
         if self.engine:
