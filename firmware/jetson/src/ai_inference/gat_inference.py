@@ -1,29 +1,38 @@
 from pathlib import Path
+from typing import Any
 
 import tensorrt as trt
 import torch
 
-from shared_src.common import Singleton, python_to_trt_level
+from shared_src.common import python_to_trt_level
 from shared_src.inference import NUM_LANES
 
 from .core import logger
+from .pipeline import Model
 
 
-class GATInference(metaclass=Singleton):
+class GATInference(Model):
     """
     GATInference class for performing inference using a TensorRT engine.
     This class loads a TensorRT engine from a file and performs inference
     on input data using the engine.
     """
 
-    def __init__(self, engine_path: Path, enable_host_code: bool = False):
-        # Load the TensorRT engine
-        self.engine_path = engine_path
+    def __init__(self, model_path: Path, enable_host_code: bool = False):
+        self.enable_host_code = enable_host_code
+        super().__init__(model_path)
+
+    def _load(self):
+        """
+        Load the TensorRT engine from the specified model path.
+        This method initializes the TensorRT runtime and creates an execution context.
+        """
         trt_level = python_to_trt_level(logger.level)
         self.logger = trt.Logger(trt.Logger.INFO.__class__(trt_level))
         trt.init_libnvinfer_plugins(self.logger, "")
-        with open(self.engine_path, "rb") as f, trt.Runtime(self.logger) as runtime:
-            runtime.engine_host_code_allowed = enable_host_code
+
+        with open(self._model_path, "rb") as f, trt.Runtime(self.logger) as runtime:
+            runtime.engine_host_code_allowed = self.enable_host_code
             self.engine = runtime.deserialize_cuda_engine(f.read())
 
         if self.engine is None:
@@ -34,9 +43,7 @@ class GATInference(metaclass=Singleton):
         self.context = self.engine.create_execution_context()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        logger.debug(f"Model engine loaded from {self.engine_path}")
-
-    def infer(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
+    def infer(self, *data: Any) -> torch.Tensor:
         """
         Perform inference using the TensorRT engine.
 
@@ -47,6 +54,14 @@ class GATInference(metaclass=Singleton):
         Returns:
             torch.Tensor: Output data from the model.
         """
+        if len(data) != 2:
+            raise ValueError(
+                "Expected two inputs: x (node features) and edge_index (edge indices)."
+            )
+        x, edge_index = data
+        if not isinstance(x, torch.Tensor) or not isinstance(edge_index, torch.Tensor):
+            raise TypeError("Both x and edge_index must be torch.Tensor objects.")
+
         # Check for empty input
         self._check_inputs(x, edge_index)
 
@@ -72,7 +87,7 @@ class GATInference(metaclass=Singleton):
         self.context.execute_v2(bindings)
 
         # Output is already a torch tensor on the correct device
-        return output_tensor
+        return output_tensor.argmax(dim=1)
 
     @staticmethod
     def _check_inputs(x: torch.Tensor, edge_index: torch.Tensor) -> bool:

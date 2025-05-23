@@ -1,3 +1,5 @@
+from typing import Any
+
 from dynamixel_sdk import *
 
 from shared_src.common import StoppableThread
@@ -199,7 +201,7 @@ class ServoManager(StoppableThread):
 
                 self.add_servo(id, type)
 
-    def on_event(self, command: str, value: str):
+    def on_event(self, command: str, value: Any):
         """Handle incoming commands from the server."""
         logger.debug(f"Received command: {command} with value: {value}")
         turning_degree = self._lane_config.get("turning_degree", 0)
@@ -213,7 +215,7 @@ class ServoManager(StoppableThread):
                 #! and that that the lanes are numbered from 0 to n-1 from left to right
                 #! This makes it easier to manage the servos
 
-                from_lane, to_lane = tuple(map(int, value.split("-->")))
+                from_lane, to_lane = value
                 if from_lane < 0 or to_lane < 0:
                     logger.error(
                         f"Invalid lane mapping: Lanes {from_lane} or {to_lane} not found"
@@ -242,5 +244,4 @@ class ServoManager(StoppableThread):
                 logger.debug(f"Setting angle for {from_lane} to {angle}")
                 logger.info(f"Switching from lane {from_lane} to lane {to_lane}")
             case _:
-                logger.error(f"Unknown command: {command}")
                 return

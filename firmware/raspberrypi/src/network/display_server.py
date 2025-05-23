@@ -1,7 +1,7 @@
 import subprocess as sp
 import time
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 import cv2
 import requests as req
@@ -129,7 +129,7 @@ class DisplayServer(StoppableThread):
             logger.error(f"DisplayServer encountered an error: {e}")
             raise  # Propagate error for reconnect logic
 
-    def on_event(self, command: str, value: str):
+    def on_event(self, command: str, value: Any):
         """Handle incoming commands from the server."""
         logger.debug(f"Received command: {command} with value: {value}")
 
@@ -141,7 +141,7 @@ class DisplayServer(StoppableThread):
                 #! We suppose that the lanes are numbered from 0 to n-1 from left to right
                 #! This makes it easier to manage the directions
 
-                from_lane, to_lane = tuple(map(int, value.split("-->")))
+                from_lane, to_lane = value
                 if from_lane < 0 or to_lane < 0:
                     logger.error(
                         f"Invalid lane mapping: Lanes {from_lane} or {to_lane} not found"
@@ -160,7 +160,6 @@ class DisplayServer(StoppableThread):
                 )
                 logger.info(f"Switching from lane {from_lane} to lane {to_lane}")
             case _:
-                logger.error(f"Unknown command: {command}")
                 return
 
     def dispose(self):

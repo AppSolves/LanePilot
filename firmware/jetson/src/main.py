@@ -1,10 +1,7 @@
-import atexit
 import signal
 from pathlib import Path
 
-from firmware.jetson.src.ai_inference import ModelPipeline
-from firmware.jetson.src.ai_inference.gat_inference import GATInference
-from firmware.jetson.src.ai_inference.yolo_inference import YOLOInference
+from firmware.jetson.src.ai_inference import GATInference, ModelPipeline, YOLOInference
 from shared_src.common import Config, StoppableThread, run_with_retry, stop_threads
 from shared_src.network import NETWORK_CONFIG, ServerClient, respond_to_broadcast
 
@@ -41,7 +38,7 @@ def start_network(
 
     model_paths = Path(Config.get("ROOT_DIR"), "models")
     pipeline = ModelPipeline(
-        [
+        models=[
             YOLOInference(
                 Path(model_paths, "vehicle_detection", "vehicle_detection.engine"),
                 return_tensors=True,
@@ -50,14 +47,15 @@ def start_network(
                 Path(model_paths, "lane_allocation", "lane_allocation.engine"),
                 enable_host_code=True,
             ),
-        ]
+        ],
+        server=server_thread,
     )
     gstreamer_thread.add_listener(pipeline)
 
     threads: tuple[StoppableThread, ...] = (server_thread, gstreamer_thread)
-    atexit.register(pipeline.dispose)
     signal.signal(signal.SIGTERM, lambda _, __: stop_threads(threads))
     gstreamer_thread.join()
+    pipeline.dispose()
     stop_threads(threads)
 
     # After joining, check for exceptions

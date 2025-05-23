@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import zmq
 
@@ -99,6 +99,18 @@ class ServerClient(StoppableThread):
 
         finally:
             self.dispose()
+
+    def send(self, command: str, value: Optional[Any] = None) -> None:
+        """Send a command to the server.
+        Args:
+            command (str): The command to send.
+            value (Any, optional): The value associated with the command.
+        """
+        try:
+            self._socket.send_json({"command": command, "value": value})
+        except zmq.ZMQError as e:
+            logger.error(f"{self.type} failed to send command: {e}")
+            raise ConnectionError(f"{self.type} send failed: {e}")
 
     def dispose(self) -> None:
         """Clean up the resources."""
