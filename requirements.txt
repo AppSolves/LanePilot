@@ -55,7 +55,7 @@ onnx_graphsurgeon==0.5.8
 onnxconverter-common==1.14.0
 onnxruntime-directml==1.22.0
 onnxruntime-gpu==1.22.0
-onnxscript==0.2.5
+onnxscript==0.2.6
 onnxslim==0.1.53
 opencv-contrib-python==4.11.0.86
 opencv-python==4.11.0.86
@@ -72,7 +72,7 @@ py-cpuinfo==9.0.0
 pyarrow==20.0.0
 pybind11==2.13.6
 pycuda==2025.1
-pydantic==2.11.4
+pydantic==2.11.5
 pydantic_core==2.33.2
 Pygments==2.19.1
 pynvml==12.0.0
@@ -114,7 +114,7 @@ transformers==4.52.3
 typing-inspection==0.4.1
 typing_extensions==4.13.2
 tzdata==2025.2
-ultralytics==8.3.142
+ultralytics==8.3.143
 ultralytics-thop==2.0.14
 urllib3==2.4.0
 Werkzeug==3.1.3
