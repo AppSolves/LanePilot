@@ -21,7 +21,7 @@ def load_model(model_path: Path):
     Returns:
         YOLO: Loaded YOLO model.
     """
-    if not model_path.exists():
+    if not model_path.is_file():
         logger.error(f"Model path does not exist: {model_path}")
         raise FileNotFoundError(f"Model path does not exist: {model_path}")
 
