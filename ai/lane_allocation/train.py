@@ -2,46 +2,19 @@ import shutil
 from pathlib import Path
 
 import torch
-from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
-from shared_src.data_preprocessing import build_edge_index, unpack_dataset
+from shared_src.data_preprocessing import (
+    DatasetSplit,
+    load_dataset_split,
+    unpack_dataset,
+)
 from shared_src.inference import MAX_VEHICLES_PER_LANE, NUM_LANES
 from shared_src.postprocessing import export_model_to_trt
 
 from .core import MODULE_CONFIG, Config, logger
 from .early_stopping import EarlyStopping
-from .model import DatasetSplit, LaneAllocationGAT
-
-
-def load_dataset_split(
-    dataset_path: Path,
-    dataset_split: DatasetSplit,
-    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-    max_distance_cm: float = 10.0,
-) -> list[Data]:
-    dataset = []
-    feature_dim = None
-
-    for file in Path(dataset_path, dataset_split.value).iterdir():
-        if file.is_file() and file.suffix == ".pt":
-            data = torch.load(file)
-            x = data["x"]  # Shape: [num_vehicles, feature_dim]
-            y = data["y"]  # Shape: [num_vehicles]
-
-            if feature_dim is None:
-                feature_dim = x.shape[1]
-            elif feature_dim != x.shape[1]:
-                logger.error(
-                    f"Feature dimension mismatch in file '{file}': expected {feature_dim}, got {x.shape[1]}"
-                )
-                raise ValueError(f"Feature dimension mismatch in dataset files: {file}")
-
-            edge_index = build_edge_index(x, max_distance=max_distance_cm)
-            data_obj = Data(x=x, edge_index=edge_index, y=y).to(device)
-            dataset.append(data_obj)
-
-    return dataset
+from .model import LaneAllocationGAT
 
 
 def train():

@@ -1,4 +1,3 @@
-from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -11,12 +10,6 @@ from torch_geometric.nn import GATv2Conv
 from shared_src.inference import NUM_LANES
 
 from .core import logger
-
-
-class DatasetSplit(Enum):
-    TRAIN = "train"
-    VALIDATION = "valid"
-    TEST = "test"
 
 
 class LaneAllocationGAT(torch.nn.Module):
