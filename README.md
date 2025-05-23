@@ -4,7 +4,11 @@
 
 # `LanePilot 🚗`
 
-![GitHub stars](https://img.shields.io/github/stars/AppSolves/QuickClipAI) ![GitHub forks](https://img.shields.io/github/forks/AppSolves/QuickClipAI) ![GitHub issues](https://img.shields.io/github/issues/AppSolves/QuickClipAI) ![GitHub license](https://img.shields.io/github/license/AppSolves/QuickClipAI)
+![GitHub issues](https://img.shields.io/github/issues/AppSolves/LanePilot)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/AppSolves/LanePilot)
+
+[![Stargazers repo roster for @AppSolves/LanePilot](https://reporoster.com/stars/dark/AppSolves/LanePilot)](https://github.com/AppSolves/LanePilot/stargazers)
+[![Forkers repo roster for @AppSolves/LanePilot](https://reporoster.com/forks/dark/AppSolves/LanePilot)](https://github.com/AppSolves/LanePilot/network/members)
 
 <h4><code>LanePilot</code> is an AI-powered system that dynamically optimizes traffic flow by analyzing lane utilization and congestion patterns in real time.
 <br>
@@ -20,6 +24,8 @@ It ensures efficient lane allocation to reduce bottlenecks and improve overall r
 
 ## Introduction 📖
 Welcome to the **QuickClipAI** Project! This project aims to provide an efficient and powerful AI-driven tool for generating engaging YouTube shorts and videos automatically. Whether you're a content creator, marketer, or just someone looking to boost your online presence, QuickClipAI offers a seamless and creative video generation solution.
+
+<img src="./assets/github/vehicle_detection.png" alt="LanePilot" width="100%" height="auto" min-height="50vw" style="border: 2px solid #b3b4b5; border-radius: 5px;">
 
 ## Features 🚀
 - **AI-Driven Content Generation**: Leverages advanced AI algorithms to automatically create engaging YouTube shorts and videos from text inputs.
