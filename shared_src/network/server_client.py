@@ -77,12 +77,15 @@ class ServerClient(StoppableThread):
 
                 command, value = data.get("command"), data.get("value")
 
-                for listener in self.listeners:
-                    listener(command, value)
-
                 if command == "exit":
                     logger.info(f"Exit command received, shutting down {self.type}.")
                     break
+
+                for listener in self.listeners:
+                    res = listener(command, value)
+                    if res:
+                        command, value = res
+                        self._socket.send_json({"command": command, "value": value})
 
                 try:
                     self._socket.send_json({"command": "status", "value": "ok"})
