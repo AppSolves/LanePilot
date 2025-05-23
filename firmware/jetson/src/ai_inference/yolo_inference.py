@@ -2,13 +2,16 @@ import time
 from pathlib import Path
 
 import cv2
+import torch
 from ultralytics import YOLO
 
 from shared_src.common import Config, Singleton
-from shared_src.data_preprocessing import BoxShape, box_to_polygon
+from shared_src.data_preprocessing import BoxShape, box_to_polygon, build_edge_index
+from shared_src.inference import MODULE_CONFIG as VEHICLE_CONFIG
 from shared_src.inference import VehicleState
 
 from .core import logger
+from .gat_inference import GATInference
 
 
 class YOLOInference(metaclass=Singleton):
@@ -24,11 +27,13 @@ class YOLOInference(metaclass=Singleton):
         confidence: float = 0.5,
         cleanup_interval: float = 5.0,
         cleanup_timeout: float = 10.0,
+        return_tensors: bool = False,
     ):
         self.model_path = model_path
         if not self.model_path.is_file():
             raise FileNotFoundError(f"Model path does not exist: {self.model_path}")
 
+        self.return_tensors = return_tensors
         self.confidence = confidence
         self.cache_dir = Path(Config.get("global_cache_dir"), "yolo", "runs", "segment")
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -37,6 +42,8 @@ class YOLOInference(metaclass=Singleton):
         self.cleanup_interval = cleanup_interval
         self.cleanup_timeout = cleanup_timeout
         self.last_cleanup_time = time.time()
+        self.vehicle_config = VEHICLE_CONFIG.get("vehicle", {})
+        self.cache: dict[int, tuple[torch.Tensor, torch.Tensor]] = {}
 
     def clean_vehicle_states(self):
         current_time = time.time()
@@ -86,7 +93,43 @@ class YOLOInference(metaclass=Singleton):
                 logger.warning(f"YOLO: Skipping invalid box format for ID {id}: {box}")
 
         self.clean_vehicle_states()
+        logger.debug(f"YOLO: Vehicle states updated: {self.vehicle_states}")
+
+        if self.return_tensors:
+            return self._to_tensor(self.vehicle_states)
         return self.vehicle_states
+
+    def _to_tensor(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Convert vehicle states to tensors for model input.
+        Returns:
+            tuple: Tuple containing the feature vectors and edge index.
+        """
+        # Maintain a list of the vehicles' feature vectors
+        ids, states = zip(*self.vehicle_states.items())
+        id_hash = hash(ids)
+
+        # Build edge index if needed
+        if id_hash in self.cache:
+            x, edge_index = self.cache[id_hash]
+            return x, edge_index
+        else:
+            feature_vectors = [state.feature_vector for state in states]
+
+            # Stack the feature vectors into a tensor
+            x = torch.stack(feature_vectors).to(self.model.device)
+
+            # Build edge index
+            edge_index = build_edge_index(
+                x,
+                max_distance=self.vehicle_config.get("max_distance_cm", 10),
+            )
+
+            # Ensure input validity
+            assert GATInference._check_inputs(x, edge_index)
+
+            self.cache[id_hash] = (x, edge_index)
+            return x, edge_index
 
     def dispose(self):
         """
@@ -94,6 +137,6 @@ class YOLOInference(metaclass=Singleton):
         """
         if self.model:
             del self.model
-        logger.debug("YOLO model disposed.")
         self.vehicle_states.clear()
-        logger.debug("Vehicle states cleared.")
+        self.cache.clear()
+        logger.info("YOLO model disposed.")

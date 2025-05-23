@@ -48,15 +48,7 @@ class GATInference(metaclass=Singleton):
             torch.Tensor: Output data from the model.
         """
         # Check for empty input
-        if x.numel() == 0 or edge_index.numel() == 0:
-            logger.error("Input arrays must not be empty.")
-            raise ValueError("Input arrays must not be empty.")
-        if x.ndim != 2:
-            logger.error("x should be of shape [num_nodes, num_features]")
-            raise ValueError("x should be of shape [num_nodes, num_features]")
-        if edge_index.ndim != 2 or edge_index.shape[0] != 2:
-            logger.error("edge_index should be of shape [2, num_edges]")
-            raise ValueError("edge_index should be of shape [2, num_edges]")
+        self._check_inputs(x, edge_index)
 
         # Ensure tensors are on the correct device (GPU)
         x_tensor = x.to(self.device, non_blocking=True)
@@ -82,6 +74,27 @@ class GATInference(metaclass=Singleton):
         # Output is already a torch tensor on the correct device
         return output_tensor
 
+    @staticmethod
+    def _check_inputs(x: torch.Tensor, edge_index: torch.Tensor) -> bool:
+        """
+        Check the input tensors for validity.
+        Args:
+            x (torch.Tensor): Input data of shape [num_nodes, num_features].
+            edge_index (torch.Tensor): Edge index of shape [2, num_edges].
+        Raises:
+            ValueError: If the input tensors are not valid.
+        """
+        if x.numel() == 0 or edge_index.numel() == 0:
+            logger.error("Input arrays must not be empty.")
+            raise ValueError("Input arrays must not be empty.")
+        if x.ndim != 2:
+            logger.error("x should be of shape [num_nodes, num_features]")
+            raise ValueError("x should be of shape [num_nodes, num_features]")
+        if edge_index.ndim != 2 or edge_index.shape[0] != 2:
+            logger.error("edge_index should be of shape [2, num_edges]")
+            raise ValueError("edge_index should be of shape [2, num_edges]")
+        return True
+
     def dispose(self):
         """
         Dispose of the TensorRT context and engine.
@@ -91,4 +104,4 @@ class GATInference(metaclass=Singleton):
         if self.engine:
             del self.engine
 
-        logger.debug("Model context and engine disposed.")
+        logger.info("Model context and engine disposed.")

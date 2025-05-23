@@ -43,7 +43,8 @@ def start_network(
     pipeline = ModelPipeline(
         [
             YOLOInference(
-                Path(model_paths, "vehicle_detection", "vehicle_detection.engine")
+                Path(model_paths, "vehicle_detection", "vehicle_detection.engine"),
+                return_tensors=True,
             ),
             GATInference(
                 Path(model_paths, "lane_allocation", "lane_allocation.engine"),
