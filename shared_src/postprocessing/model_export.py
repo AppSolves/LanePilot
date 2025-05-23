@@ -135,6 +135,15 @@ def export_model_to_trt(
         )
 
         # Run the command
-        sp.run(tuple(c for c in command if c), shell=True, check=True)
+        ret = sp.run(
+            tuple(c for c in command if c),
+            shell=True,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        if ret.returncode != 0:
+            raise RuntimeError(f"trtexec failed with error: {ret.stderr}")
 
+        logger.debug(ret.stdout)
         logger.debug(f"TensorRT model exported to '{trt_path}'!")
