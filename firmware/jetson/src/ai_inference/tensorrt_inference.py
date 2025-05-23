@@ -1,9 +1,7 @@
 from pathlib import Path
 
-import numpy as np
-import pycuda.autoinit as _
-import pycuda.driver as cuda
 import tensorrt as trt
+import torch
 
 from shared_src.common import StoppableThread, python_to_trt_level
 from shared_src.inference import NUM_LANES
@@ -34,71 +32,59 @@ class TensorRTInference(StoppableThread):
             )
 
         self.context = self.engine.create_execution_context()
-        self.stream = cuda.Stream()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         super().__init__(*args, **kwargs)
 
         logger.debug(f"TensorRT engine loaded from {self.engine_path}")
 
-    def infer(self, x: np.ndarray, edge_index: np.ndarray) -> np.ndarray:
+    def infer(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
         """
         Perform inference using the TensorRT engine.
 
         Args:
-            x (np.ndarray): Input data of shape [num_nodes, num_features].
-            edge_index (np.ndarray): Edge index of shape [2, num_edges].
+            x (torch.Tensor): Input data of shape [num_nodes, num_features].
+            edge_index (torch.Tensor): Edge index of shape [2, num_edges].
 
         Returns:
-            np.ndarray: Output data from the model.
+            torch.Tensor: Output data from the model.
         """
         # Check for empty input
-        if x.size == 0 or edge_index.size == 0:
+        if x.numel() == 0 or edge_index.numel() == 0:
+            logger.error("Input arrays must not be empty.")
             raise ValueError("Input arrays must not be empty.")
 
-        # Define input and output shapes
-        input_shapes = [x.shape, edge_index.shape]
+        # Ensure tensors are on the correct device (GPU)
+        x_tensor = x.to(self.device, non_blocking=True)
+        edge_index_tensor = edge_index.to(self.device, non_blocking=True)
         output_shape = (1, NUM_LANES)
-
-        # Create host buffers
-        h_input_x = np.array(x, dtype=np.float32).reshape(input_shapes[0])
-        h_input_edge_index = np.array(edge_index, dtype=np.int32).reshape(
-            input_shapes[1]
+        output_tensor = torch.empty(
+            output_shape, dtype=torch.float32, device=self.device
         )
-        h_output = np.empty(output_shape, dtype=np.float32)
 
-        # Allocate device memory
-        d_input_x = cuda.mem_alloc(h_input_x.nbytes)
-        d_input_edge_index = cuda.mem_alloc(h_input_edge_index.nbytes)
-        d_output = cuda.mem_alloc(h_output.nbytes)
-
-        # Copy data to device
-        cuda.memcpy_htod(d_input_x, h_input_x)
-        cuda.memcpy_htod(d_input_edge_index, h_input_edge_index)
-
-        # Execute inference
-        bindings = [int(d_input_x), int(d_input_edge_index), int(d_output)]
+        # Bindings: device pointers
+        bindings = [
+            x_tensor.data_ptr(),
+            edge_index_tensor.data_ptr(),
+            output_tensor.data_ptr(),
+        ]
 
         # Set dynamic shapes
-        self.context.set_input_shape("x", h_input_x.shape)
-        self.context.set_input_shape("edge_index", h_input_edge_index.shape)
+        self.context.set_input_shape("x", x_tensor.shape)
+        self.context.set_input_shape("edge_index", edge_index_tensor.shape)
 
         self.context.execute_v2(bindings)
 
-        # Copy output back to host
-        cuda.memcpy_dtoh(h_output, d_output)
-
-        return h_output
+        # Output is already a torch tensor on the correct device
+        return output_tensor
 
     def dispose(self):
         """
-        Dispose of the TensorRT context and stream.
+        Dispose of the TensorRT context and engine.
         """
         self.stop()
         if self.context:
             del self.context
-        if self.stream:
-            self.stream.synchronize()
-            del self.stream
         if self.engine:
             del self.engine
 
-        logger.debug("TensorRT context and stream disposed.")
+        logger.debug("TensorRT context and engine disposed.")
