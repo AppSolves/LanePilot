@@ -62,7 +62,7 @@ curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/
 > [!IMPORTANT]
 > The Jetson image (more precisely, the \`opencv_base\` image) is built **without** the NVIDIA Video Codec SDK (\`cudacodec\` support).
 > This is due to licensing issues with NVIDIA.
-> If you need \`cudacodec\` support, please follow the instructions in the \`README\` and build the image locally using the provided Dockerfile.
+> If you need \`cudacodec\` support, please follow the instructions in the \`README.md\` and build the image locally using the provided Dockerfile.
 
 > [!TIP]
 > It is strongly recommended to enable [SUPER MAXN mode](https://www.jetson-ai-lab.com/initial_setup_jon.html#8-unlock-super-performance) on your Jetson device.
