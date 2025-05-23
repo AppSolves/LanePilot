@@ -36,9 +36,9 @@ For more information, please view the [documentation](Documentation.pdf) (writte
 - [x] **Data Logging & Visualization:** Stores and visualizes traffic data for analysis and reporting.
 
 - **Not implemented yet**:
-    - [] **Vehicle Classification:** Identifies vehicle types (e.g., cars, trucks, buses) for tailored traffic management.
-    - [] **Customizable Alerts:** Notifies operators or drivers about incidents, congestion, or recommended actions.
-    - [] **Congestion Analysis:** Analyzes traffic patterns and congestion levels to provide insights for urban planners.
+    - [ ] **Vehicle Classification:** Identifies vehicle types (e.g., cars, trucks, buses) for tailored traffic management.
+    - [ ] **Customizable Alerts:** Notifies operators or drivers about incidents, congestion, or recommended actions.
+    - [ ] **Congestion Analysis:** Analyzes traffic patterns and congestion levels to provide insights for urban planners.
 
 <br>
 <kbd> <img src="./assets/github/vehicle_detection.png" alt="LanePilot" width="100%" height="auto" min-height="50vw"> </kbd>
