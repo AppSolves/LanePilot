@@ -1,3 +1,4 @@
+from .core import MODULE_CONFIG, logger
 from .vehicle_state import (
     LANE_UTILIZATION,
     MAX_VEHICLES_PER_LANE,
@@ -10,4 +11,6 @@ __all__ = [
     "NUM_LANES",
     "LANE_UTILIZATION",
     "VehicleState",
+    "MODULE_CONFIG",
+    "logger",
 ]

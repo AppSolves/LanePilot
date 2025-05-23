@@ -15,6 +15,14 @@ from ultralytics import YOLO
 from .core import logger
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+from shared_src.data_preprocessing import unpack_dataset
+from shared_src.inference import MODULE_CONFIG as INFERENCE_CONFIG
+
+
+def __load_int8_calibration_data() -> Path:
+    dataset_path = Path(INFERENCE_CONFIG.get("dataset_path"))
+    dataset_path = unpack_dataset(dataset_path, "vehicle_detection")
+    return Path(dataset_path, "data.yaml")
 
 
 def export_model_to_onnx(
@@ -81,9 +89,11 @@ def export_model_to_trt(
         logger.info("Exporting YOLO model to TensorRT format...")
         path = model.export(
             format="engine",
+            int8=True,
             dynamic=True,
             simplify=True,
             device="cuda",
+            data=__load_int8_calibration_data(),
         )
         return Path(path)
     else:
