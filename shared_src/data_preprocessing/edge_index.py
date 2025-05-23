@@ -46,6 +46,10 @@ def build_edge_index(
         reversed_edges = torch.stack([dst, src], dim=0)
         edge_index = torch.cat([edge_index, reversed_edges], dim=1)
 
+    # Edge Index is not allowed to be empty, there has to be atleast one edge
+    if edge_index.numel() == 0:
+        edge_index = torch.tensor([[0], [0]], dtype=torch.long)
+
     if return_weights:
         distances = pos_diff[src, dst]
         if weight_type == "inverse":
