@@ -9,7 +9,7 @@ from shared_src.inference import NUM_LANES
 from .core import logger
 
 
-class TensorRTInference(StoppableThread):
+class GATInference(StoppableThread):
     def __init__(
         self,
         engine_path: Path,
@@ -35,7 +35,7 @@ class TensorRTInference(StoppableThread):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         super().__init__(*args, **kwargs)
 
-        logger.debug(f"TensorRT engine loaded from {self.engine_path}")
+        logger.debug(f"Model engine loaded from {self.engine_path}")
 
     def infer(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
         """
@@ -93,4 +93,4 @@ class TensorRTInference(StoppableThread):
         if self.engine:
             del self.engine
 
-        logger.debug("TensorRT context and engine disposed.")
+        logger.debug("Model context and engine disposed.")

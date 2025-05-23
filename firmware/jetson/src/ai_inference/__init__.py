@@ -1,4 +1,4 @@
 from .core import logger
-from .tensorrt_inference import TensorRTInference
+from .gat_inference import GATInference
 
-__all__ = ["TensorRTInference", "logger"]
+__all__ = ["GATInference", "logger"]
