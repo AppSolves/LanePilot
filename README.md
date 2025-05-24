@@ -105,7 +105,7 @@ LanePilot is modular and configurable:
 Running LanePilot is as simple as running `docker compose` on your platform/device:
 
    ```bash
-   ./scripts/compose.sh [<platform>] # *Done ✨*
+   ./scripts/compose.sh [<platform>] # Done ✨
    ```
 
 ## Credits 🙏
