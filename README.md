@@ -82,9 +82,10 @@ curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/
    - **CUDA, including cuDNN and TensorRT:** For GPU acceleration, install the appropriate CUDA version for your GPU. Follow the [NVIDIA installation guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) for your OS.
 
 4. **Build Docker Images:**  
-   If you wish to build manually, run the `scripts/compose.sh` script:
+   If you wish to build manually, run the `scripts/build_opencv.sh` and `scripts/compose.sh` scripts:
    ```bash
-   chmod +x scripts/compose.sh # Make the script executable
+   chmod +x scripts/*.sh # Make all helper scripts executable
+   ./scripts/build_opencv.sh # Build the OpenCV image (arm64 only)
    ./scripts/compose.sh [<platform>]
    ```
 
