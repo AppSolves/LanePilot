@@ -117,7 +117,7 @@ This project was developed and is maintained by [AppSolves](https://github.com/A
 - [Website](https://appsolves.dev)
 - [GitHub](https://github.com/AppSolves)
 - [Instagram](https://www.instagram.com/appsolves.dev/)
-- [This Repository](https://github.com/AppSolves/LanePilot)
+- [YouTube](https://www.youtube.com/@curioburstz)
 
 ## License 📜
 This project is licensed under a custom license with **All Rights Reserved**.  
@@ -129,4 +129,5 @@ LanePilot © 2025 by Kaan Gönüldinc
 
 ## Conclusion 🎉
 
-Thank you for checking out LanePilot! We hope you find this tool useful for smart traffic management and urban mobility. For questions, feedback, or suggestions, please reach out to us.
+Thank you for checking out LanePilot! We hope you find this tool useful for smart traffic management and urban mobility. For questions, feedback, or suggestions, please reach out to us via the provided contact methods. Happy coding!
+</div>
