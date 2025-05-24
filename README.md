@@ -75,7 +75,7 @@ curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/
    venv\Scripts\activate
    # On Unix/Mac:
    source venv/bin/activate
-   pip install -r requirements.txt
+   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu128
    ```
 
 3. **Install Additional Tools (if needed):**  
