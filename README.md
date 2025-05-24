@@ -28,7 +28,7 @@ Welcome to **LanePilot**!
 LanePilot is an advanced AI-based traffic management system designed to analyze real-time lane usage and congestion, enabling dynamic lane allocation and smarter traffic flow. By leveraging computer vision and deep learning, LanePilot helps reduce bottlenecks, minimize CO₂ emissions, improve road safety, and optimize urban mobility.
 
 > [!NOTE]
-> For more information, please view the [documentation](Documentation.pdf) (written in German).
+> For more information, please view the very detailed [project documentation](Documentation.pdf) (written in German).
 
 ## Features 🚀
 - [x] **Real-Time Lane Detection:** Uses AI and computer vision to detect lanes, vehicles, and congestion in real-time.
