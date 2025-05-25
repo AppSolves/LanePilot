@@ -68,9 +68,10 @@ def get_formatter(
                 "%Y-%m-%d %H:%M:%S",
             )
         case _:
+            options = ", ".join(FormattingPurpose._member_names_)
             raise ValueError(
                 f"Unknown formatter purpose: {purpose}. "
-                "Available options are: 'default', 'file'."
+                f"Available options are: {options}."
             )
 
 
@@ -78,7 +79,7 @@ def get_logger(
     level: Optional[int | str] = None,
     create_log_file: bool = True,
 ) -> logging.Logger:
-    """Initialize the LanePilot logger.
+    """Initialize the logger.
 
     Args:
         level (int, optional): The logging level. Defaults to logging.DEBUG.
