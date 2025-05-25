@@ -2,6 +2,7 @@ import inspect
 import logging
 import logging.handlers
 import os
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -42,6 +43,37 @@ def python_to_trt_level(py_level: int) -> int:
         return 0
 
 
+class FormattingPurpose(Enum):
+    DEFAULT = "default"
+    FILE = "file"
+
+    def __str__(self):
+        return self.value
+
+
+def get_formatter(
+    purpose: FormattingPurpose = FormattingPurpose.DEFAULT,
+    module: str = str(Config.get("project_name", "Unknown")),
+) -> logging.Formatter:
+    """Get a logging formatter with a specific format."""
+    match purpose:
+        case FormattingPurpose.DEFAULT:
+            return logging.Formatter(
+                f"{module} :: " + "[%(levelname)s] - [%(asctime)s] --> %(message)s",
+                "%Y-%m-%d %H:%M:%S",
+            )
+        case FormattingPurpose.FILE:
+            return logging.Formatter(
+                "[%(levelname)s] - [%(asctime)s] --> %(message)s",
+                "%Y-%m-%d %H:%M:%S",
+            )
+        case _:
+            raise ValueError(
+                f"Unknown formatter purpose: {purpose}. "
+                "Available options are: 'default', 'file'."
+            )
+
+
 def get_logger(
     level: Optional[int | str] = None,
     create_log_file: bool = True,
@@ -55,8 +87,8 @@ def get_logger(
     Returns:
         logging.Logger: The logger object.
     """
-    project_name = Config.get("project_name", "Unknown")
-    root_dir = Path(Config.get("ROOT_DIR"))
+    project_name = str(Config.get("project_name", "Unknown"))
+    root_dir = Path(str(Config.get("ROOT_DIR")))
 
     env_vars = Config.get("environment_variables", {}).get("logging", {})
 
@@ -94,12 +126,15 @@ def get_logger(
                 )
             )
 
-    formatter = logging.Formatter(
-        f"{module} :: " + "[%(levelname)s] - [%(asctime)s] --> %(message)s",
-        "%Y-%m-%d %H:%M:%S",
-    )
     for handler in logger.handlers:
-        handler.setFormatter(formatter)
+        if isinstance(handler, logging.FileHandler):
+            handler.setFormatter(
+                get_formatter(purpose=FormattingPurpose.FILE, module=module)
+            )
+        else:
+            handler.setFormatter(
+                get_formatter(purpose=FormattingPurpose.DEFAULT, module=module)
+            )
 
     return logger
 
