@@ -65,7 +65,7 @@ curl -sSL https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/main/
 > If you need \`cudacodec\` support, please follow the instructions in the \`README.md\` and build the image locally using the provided Dockerfile.
 
 > [!TIP]
-> It is strongly recommended to enable [SUPER MAXN mode](https://www.jetson-ai-lab.com/initial_setup_jon.html#8-unlock-super-performance) on your Jetson device.
+> It is strongly recommended to enable [MAXN SUPER mode](https://www.jetson-ai-lab.com/initial_setup_jon.html#8-unlock-super-performance) on your Jetson device.
 > This mode allows the Jetson to run at *maximum* performance, which is beneficial for AI workloads.
 EOF
 )
