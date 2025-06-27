@@ -33,39 +33,39 @@ def train():
 
     # Unpack the dataset and remove previous training runs
     dataset_path = unpack_dataset(dataset_path, "vehicle_detection")
-    shutil.rmtree(Path(dataset_path, "runs/segment/train"), ignore_errors=True)
+    shutil.rmtree(dataset_path / "runs/segment/train", ignore_errors=True)
 
     # Convert classes to segments if specified in the config
     for class_id in dataset_config.get("convert_classes_with_ids", []):
         convert_class_to_segment(dataset_path, class_id, ignore_errors=True)
 
     # Start training the model
-    model = YOLO(model=Path(dataset_path, model_name))
+    model = YOLO(model=dataset_path / model_name)
     num_epochs = model_config.get("epochs")
     num_workers = model_config.get("workers")
     imgsz = model_config.get("imgsz")
 
     logger.info(f"Training model: {model_name}")
     model.train(
-        data=Path(dataset_path, "data.yaml"),
+        data=dataset_path / "data.yaml",
         epochs=num_epochs,
         device="cuda",
         workers=num_workers,
         imgsz=imgsz,
-        project=Path(dataset_path, "runs", "segment"),
+        project=dataset_path / "runs" / "segment",
     )
     logger.info("Training completed")
 
     # Delete the temporary "yolo11n.pt" file created by YOLO
-    os.remove(Path(Config.get("ROOT_DIR"), "yolo11n.pt"))
+    os.remove(Path(str(Config.get("ROOT_DIR"))) / "yolo11n.pt")
 
     # Save the best model weights
-    best_weights_path = Path(dataset_path, "runs/segment/train/weights/best.pt")
-    save_path = Path(
-        Config.get("global_assets_dir"),
-        "trained_models",
-        "vehicle_detection",
-        "vehicle_detection.pt",
+    best_weights_path = dataset_path / "runs/segment/train/weights/best.pt"
+    save_path = (
+        Path(str(Config.get("global_assets_dir")))
+        / "trained_models"
+        / "vehicle_detection"
+        / "vehicle_detection.pt"
     )
     save_path.parent.mkdir(parents=True, exist_ok=True)
 

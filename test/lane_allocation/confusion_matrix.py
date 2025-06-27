@@ -77,7 +77,7 @@ def evaluate_model(
     all_labels = np.array(all_labels)
 
     # Plot confusion matrix
-    classes = [f"Lane {i}" for i in range(NUM_LANES)]
+    classes = tuple(f"Lane {i}" for i in range(NUM_LANES))
     plot_confusion_matrix(
         all_labels, all_preds, classes, title="Confusion Matrix for Lane Allocation"
     )
@@ -88,11 +88,11 @@ def main():
     # Load the model
     model_config = GAT_CONFIG.get("model", {})
 
-    model_path = Path(
-        Config.get("global_assets_dir"),
-        "trained_models",
-        "lane_allocation",
-        "lane_allocation.pt",
+    model_path = (
+        Path(str(Config.get("global_assets_dir")))
+        / "trained_models"
+        / "lane_allocation"
+        / "lane_allocation.pt"
     )
     dataset_config = GAT_CONFIG.get("dataset", {})
     dataset_path = Path(dataset_config.get("path"))

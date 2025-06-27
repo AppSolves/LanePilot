@@ -35,11 +35,11 @@ class EarlyStopping:
     @property
     def best_model_path(self) -> Path:
         """Get the path to the best model checkpoint."""
-        file_path = Path(
-            Config.get("global_cache_dir"),
-            "lane_allocation",
-            "checkpoints",
-            "model_best.pth",
+        file_path = (
+            Path(str(Config.get("global_cache_dir")))
+            / "lane_allocation"
+            / "checkpoints"
+            / "model_best.pth"
         )
         file_path.parent.mkdir(parents=True, exist_ok=True)
         return file_path

@@ -53,7 +53,7 @@ class Config(metaclass=Singleton):
             "$ROOT_DIR": root_dir.as_posix(),
         }
 
-        config_file_path = Path(root_dir, "project_config.yaml")
+        config_file_path = root_dir / "project_config.yaml"
         cls.__CONFIG = cls.load_config_file(config_file_path)
         cls.__CONFIG["ROOT_DIR"] = root_dir
 

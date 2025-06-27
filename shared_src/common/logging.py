@@ -116,11 +116,11 @@ def get_logger(
         logger.addHandler(logging.StreamHandler())
 
         if create_log_file:
-            log_dir = Path(root_dir, "runtime", "logs")
+            log_dir = root_dir / "runtime" / "logs"
             log_dir.mkdir(parents=True, exist_ok=True)
             logger.addHandler(
                 logging.handlers.RotatingFileHandler(
-                    Path(log_dir, f"{module}.log"),
+                    log_dir / f"{module}.log",
                     maxBytes=20 * 1024 * 1024,
                     backupCount=5,
                     encoding="utf-8",

@@ -3,8 +3,8 @@ from pathlib import Path
 
 from shared_src.common import Config, get_logger
 
-CONFIG_FILE: Path = Path(
-    Path(__file__).parent.parent.parent, "shared_src", "inference", "config.yaml"
+CONFIG_FILE: Path = (
+    Path(__file__).parent.parent.parent / "shared_src" / "inference" / "config.yaml"
 ).resolve()
 logger = get_logger()
 

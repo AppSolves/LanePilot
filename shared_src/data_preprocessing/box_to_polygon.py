@@ -1,6 +1,7 @@
-import os
+import shutil
 from enum import Enum
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from .core import logger
 
@@ -47,56 +48,66 @@ def convert_class_to_segment(
 ) -> None:
     """Convert a bounding box class to a segmentation element."""
 
-    # Check if the dataset path is a directory
+    # Validate dataset_path
+    if not dataset_path.is_dir():
+        logger.error(
+            f"Dataset path does not exist or is not a directory: {dataset_path}"
+        )
+        raise ValueError("Dataset path must be an existing directory.")
+
+    # Validate class_id type once
     if not isinstance(class_id, int):
         logger.error(f"Invalid class ID: {class_id}")
         raise ValueError("Class ID must be an integer.")
 
+    class_id_str = str(class_id)
+
     def _process_file(file_path: Path) -> None:
         logger.debug(f"Processing file: '{file_path}'")
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
+        # Use a temporary file for atomic write
+        with (
+            open(file_path, "r", encoding="utf-8") as f,
+            NamedTemporaryFile("w", delete=False, encoding="utf-8") as tmp,
+        ):
+            lines_processed = 0
+            for line in f:
+                if line.startswith(class_id_str):
+                    parts = line.split()
+                    if len(parts) != 5:
+                        logger.error(f"Invalid line format: {line.strip()}")
+                        raise ValueError(
+                            "Line must contain five elements. Is the class really a box object?"
+                        )
+                    box = tuple(map(float, parts[1:]))
+                    polygon = (class_id,) + box_to_polygon(box, BoxShape.XCYCWH)
+                    tmp.write(" ".join(map(str, polygon)) + "\n")
+                else:
+                    tmp.write(line)
+                lines_processed += 1
 
-        if not lines:
-            logger.error(f"File is empty: '{file_path}'. No labels found.")
-            raise ValueError(f"File is empty: '{file_path}'. No labels found.")
+            if lines_processed == 0:
+                logger.error(f"File is empty: '{file_path}'. No labels found.")
+                raise ValueError(f"File is empty: '{file_path}'. No labels found.")
 
-        new_lines = []
-        for line in lines:
-            if line.startswith(str(class_id)):
-                parts = line.split()
-                if len(parts) != 5:
-                    logger.error(f"Invalid line format: {line}")
-                    raise ValueError(
-                        "Line must contain five elements. Is the class really a box object?"
-                    )
-
-                box = tuple(map(float, parts[1:]))
-                polygon = class_id, *box_to_polygon(box, BoxShape.XCYCWH)
-                new_lines.append(" ".join(map(str, polygon)) + "\n")
-            else:
-                new_lines.append(line)
-
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.writelines(new_lines)
+        # Atomically replace original file
+        shutil.move(tmp.name, file_path)
 
         logger.debug(f"Finished processing file: '{file_path}'")
 
     logger.debug(f"Converting class with ID '{class_id}' to segmentation element")
-    dataset_subdirs = ["train", "valid", "test"]
 
-    # Convert all labels in the specified subdirectories
+    dataset_subdirs = ("train", "valid", "test")
+
     for subdir in dataset_subdirs:
-        subdir_path = Path(dataset_path, subdir, "labels")
+        subdir_path = dataset_path / subdir / "labels"
         if not subdir_path.is_dir():
             logger.error(
                 f"Subdirectory '{subdir}' does not exist in dataset path: {dataset_path}"
             )
             raise ValueError(f"Subdirectory '{subdir}' does not exist in dataset path.")
 
-        for file in os.listdir(subdir_path):
-            file_path = Path(subdir_path, file)
+        for file_path in subdir_path.iterdir():
             if file_path.is_file() and file_path.suffix == ".txt":
                 try:
                     _process_file(file_path)

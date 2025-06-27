@@ -13,7 +13,7 @@ from shared_src.data_preprocessing import BoxShape, box_to_polygon, build_edge_i
 from shared_src.inference import NUM_LANES, VehicleState
 
 DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CACHE_DIR: Path = Path(Config.get("global_cache_dir"), "vehicle_detection")
+CACHE_DIR: Path = Path(str(Config.get("global_cache_dir"))) / "vehicle_detection"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -37,11 +37,11 @@ def main(PORT: int = 8000, confidence: float = 0.5) -> None:
         logger.error("Failed to open video stream")
         return
 
-    yolo_model_path = Path(
-        Config.get("global_assets_dir"),
-        "trained_models",
-        "vehicle_detection",
-        "vehicle_detection.engine",
+    yolo_model_path = (
+        Path(str(Config.get("global_assets_dir")))
+        / "trained_models"
+        / "vehicle_detection"
+        / "vehicle_detection.engine"
     )
     if not yolo_model_path.is_file():
         logger.error(f"Model not found at {yolo_model_path}")
@@ -65,12 +65,10 @@ def main(PORT: int = 8000, confidence: float = 0.5) -> None:
         input_dim=input_dim, hidden_dim=hidden_dim, heads=num_heads
     )
     gat_model.inference(
-        model_path=Path(
-            Config.get("global_assets_dir"),
-            "trained_models",
-            "lane_allocation",
-            "lane_allocation.pt",
-        ),
+        model_path=Path(str(Config.get("global_assets_dir")))
+        / "trained_models"
+        / "lane_allocation"
+        / "lane_allocation.pt",
         device=DEVICE,
     )
     logger.debug(f"Tracking video stream on PORT {PORT}")
@@ -90,7 +88,7 @@ def main(PORT: int = 8000, confidence: float = 0.5) -> None:
             frame,
             conf=confidence,
             persist=True,
-            project=Path(CACHE_DIR, "runs", "segment"),
+            project=CACHE_DIR / "runs" / "segment",
         )[0]
         boxes = result.boxes
         if not boxes or not boxes.is_track:

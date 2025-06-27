@@ -23,7 +23,7 @@ try:
         dataset_config = INFERENCE_CONFIG.get("dataset", {})
         dataset_path = Path(dataset_config.get("path"))
         dataset_path = unpack_dataset(dataset_path, "vehicle_detection")
-        return Path(dataset_path, "data.yaml")
+        return dataset_path / "data.yaml"
 
 except ImportError:
     pass

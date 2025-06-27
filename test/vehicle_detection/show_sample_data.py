@@ -28,11 +28,11 @@ def read_label(label_path: Path):
     """Read a label file and return the bounding boxes and class IDs"""
     with open(label_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
-    masks = []
+    masks: list[tuple[int, tuple[float, ...]]] = []
     for line in lines:
         parts = line.strip().split()
         class_id = int(parts[0])
-        masks.append((class_id, [float(x) for x in parts[1:]]))
+        masks.append((class_id, tuple(float(x) for x in parts[1:])))
     return masks
 
 
@@ -53,10 +53,14 @@ def draw_masks(image, masks):
 
 def main(image_folder: Path, label_folder: Path, num_samples: int = 5):
     """Main function to read images and labels, and draw masks"""
-    image_files = [f for f in os.listdir(image_folder) if f.endswith((".jpg", ".png"))]
-    for image_file in image_files[:num_samples]:
-        image_path = Path(image_folder, image_file)
-        label_path = Path(label_folder, os.path.splitext(image_file)[0] + ".txt")
+    image_files = (
+        f
+        for f in os.listdir(image_folder)[:num_samples]
+        if f.endswith((".jpg", ".png"))
+    )
+    for image_file in image_files:
+        image_path = image_folder / image_file
+        label_path = label_folder / (os.path.splitext(image_file)[0] + ".txt")
 
         # Read the image
         image = read_image(image_path)
@@ -83,9 +87,11 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    samples_dir = Path(Config.get("global_cache_dir"), "vehicle_detection", "train")
-    image_folder = Path(samples_dir, "images")
-    label_folder = Path(samples_dir, "labels")
+    samples_dir = (
+        Path(str(Config.get("global_cache_dir"))) / "vehicle_detection" / "train"
+    )
+    image_folder = samples_dir / "images"
+    label_folder = samples_dir / "labels"
     num_samples = args.num_samples
 
     # Check if the provided paths exist

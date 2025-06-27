@@ -36,15 +36,15 @@ def start_network(
     )
     gstreamer_thread.start()
 
-    model_paths = Path(Config.get("ROOT_DIR"), "models")
+    model_paths = Path(str(Config.get("ROOT_DIR"))) / "models"
     pipeline = ModelPipeline(
         models=[
             YOLOInference(
-                Path(model_paths, "vehicle_detection", "vehicle_detection.engine"),
+                model_paths / "vehicle_detection" / "vehicle_detection.engine",
                 return_tensors=True,
             ),
             GATInference(
-                Path(model_paths, "lane_allocation", "lane_allocation.engine"),
+                model_paths / "lane_allocation" / "lane_allocation.engine",
                 enable_host_code=True,
             ),
         ],

@@ -64,7 +64,7 @@ def train():
         i: 100 * round(count / total_preds, 3) for i, count in enumerate(class_counts)
     }
     label_weights = torch.tensor(
-        [100 / value for value in class_weights.values()], dtype=torch.float32
+        tuple(100 / value for value in class_weights.values()), dtype=torch.float32
     )
     label_weights = label_weights / label_weights.mean()
     logger.debug(f"Class counts (in %): {class_weights} | Weights: {label_weights}")
@@ -143,11 +143,11 @@ def train():
     # Save the model
     logger.info("Saving the model...")
     best_model_path = early_stopping.best_model_path
-    model_save_path = Path(
-        Config.get("global_assets_dir"),
-        "trained_models",
-        "lane_allocation",
-        "lane_allocation.pt",
+    model_save_path = (
+        Path(str(Config.get("global_assets_dir")))
+        / "trained_models"
+        / "lane_allocation"
+        / "lane_allocation.pt"
     )
     model_save_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(
@@ -173,11 +173,11 @@ def train():
     )
     export_model_to_trt(
         model,
-        Path(
-            Config.get("global_assets_dir"),
-            "trained_models",
-            "lane_allocation",
-            "lane_allocation.onnx",
+        (
+            Path(str(Config.get("global_assets_dir")))
+            / "trained_models"
+            / "lane_allocation"
+            / "lane_allocation.onnx"
         ),
         dummy_input,
         input_names=["x", "edge_index"],

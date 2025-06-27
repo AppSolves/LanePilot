@@ -36,13 +36,15 @@ class YOLOInference(Model):
     ):
         self.return_tensors = return_tensors
         self.confidence = confidence
-        self.cache_dir = Path(Config.get("global_cache_dir"), "yolo", "runs", "segment")
+        self.cache_dir = (
+            Path(str(Config.get("global_cache_dir"))) / "yolo" / "runs" / "segment"
+        )
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cleanup_interval = cleanup_interval
         self.cleanup_timeout = cleanup_timeout
-        self.last_cleanup_time = time.time()
+        self._last_cleanup_time = time.time()
         self.vehicle_config = VEHICLE_CONFIG.get("vehicle", {})
-        self._tensor_cache: dict[int, tuple[torch.Tensor, torch.Tensor]] = {}
+        self._tensor_cache: dict[int, tuple[float, torch.Tensor, torch.Tensor]] = {}
         super().__init__(model_path)
 
     def _load(self):
@@ -55,19 +57,33 @@ class YOLOInference(Model):
 
     def clean_vehicle_states(self):
         current_time = time.time()
-        if not current_time - self.last_cleanup_time > self.cleanup_interval:
+        if not current_time - self._last_cleanup_time > self.cleanup_interval:
             return
 
-        stale_ids = [
+        # Clean up stale vehicle states
+        stale_ids = tuple(
             vehicle_id
             for vehicle_id, state in self._vehicle_states.items()
             if current_time - state.last_updated.timestamp() > self.cleanup_timeout
-        ]
+        )
         for vehicle_id in stale_ids:
             del self._vehicle_states[vehicle_id]
 
-        self.last_cleanup_time = current_time
-        logger.debug(f"YOLO: Cleaned up vehicle states: {stale_ids}")
+        # Clean up stale tensor cache entries
+        stale_tensors = tuple(
+            tensor_id
+            for tensor_id, (timestamp, _, _) in self._tensor_cache.items()
+            if current_time - timestamp > self.cleanup_timeout
+        )
+        for tensor_id in stale_tensors:
+            del self._tensor_cache[tensor_id]
+
+        # Update the last cleanup time
+        if stale_ids or stale_tensors:
+            self._last_cleanup_time = current_time
+            logger.debug(
+                f"YOLO: Cleaned up {len(stale_tensors)} graph cache entries and {len(stale_ids)} vehicle states."
+            )
 
     def infer(
         self, *data: Any
@@ -138,10 +154,10 @@ class YOLOInference(Model):
 
         # Build edge index if needed
         if id_hash in self._tensor_cache:
-            x, edge_index = self._tensor_cache[id_hash]
+            x, edge_index = self._tensor_cache[id_hash][1:]
             return x, edge_index
         else:
-            feature_vectors = [state.feature_vector for state in states]
+            feature_vectors = tuple(state.feature_vector for state in states)
 
             # Stack the feature vectors into a tensor
             x = torch.stack(feature_vectors).to(self.model.device)
@@ -155,7 +171,7 @@ class YOLOInference(Model):
             # Ensure input validity
             assert GATInference._check_inputs(x, edge_index)
 
-            self._tensor_cache[id_hash] = (x, edge_index)
+            self._tensor_cache[id_hash] = (time.time(), x, edge_index)
             return x, edge_index
 
     def dispose(self):

@@ -8,7 +8,7 @@ from ultralytics import YOLO
 from ai.vehicle_detection.core import logger
 from shared_src.common import Config
 
-CACHE_DIR: Path = Path(Config.get("global_cache_dir"), "vehicle_detection")
+CACHE_DIR: Path = Path(str(Config.get("global_cache_dir"))) / "vehicle_detection"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -46,7 +46,7 @@ def benchmark_model(model: YOLO, image_path: Path):
     model.predict(
         source=image,
         conf=0.5,
-        project=Path(CACHE_DIR, "runs", "segment"),
+        project=CACHE_DIR / "runs" / "segment",
     )
 
 

@@ -18,9 +18,9 @@ def unpack_dataset(dataset_path: Path, module: str) -> Path:
     logger.debug(f"Dataset zip hash: {zip_hash}")
 
     # Define cache directory and hash store
-    cache_dir = Path(Config.get("global_cache_dir"), module)
+    cache_dir = Path(str(Config.get("global_cache_dir"))) / module
     cache_dir.mkdir(parents=True, exist_ok=True)
-    hash_store = Path(cache_dir, "dataset.cache")
+    hash_store = cache_dir / "dataset.cache"
 
     # Handle hash comparison and cache management
     if hash_store.is_file():

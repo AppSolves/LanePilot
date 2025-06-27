@@ -23,7 +23,7 @@ def load_dataset_split(
     dataset = []
     feature_dim = None
 
-    for file in Path(dataset_path, dataset_split.value).iterdir():
+    for file in (dataset_path / dataset_split.value).iterdir():
         if file.is_file() and file.suffix == ".pt":
             data = torch.load(file)
             x = data["x"]  # Shape: [num_vehicles, feature_dim]

@@ -96,7 +96,7 @@ def plot_graph(index: int, data: Data, seed: int, num_lanes: int):
     num_vehicles = data.x.size(0)
     random_idx = np.random.randint(0, num_vehicles)
     features = data.x[random_idx].cpu().numpy()
-    feature_str = "\n".join([f"f{i}: {v:.3f}" for i, v in enumerate(features)])
+    feature_str = "\n".join(tuple(f"f{i}: {v:.3f}" for i, v in enumerate(features)))
     textstr = f"Vehicle {random_idx} features:\n{feature_str}"
 
     # Place the textbox at the right bottom
