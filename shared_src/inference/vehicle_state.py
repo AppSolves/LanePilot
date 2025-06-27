@@ -2,6 +2,7 @@ import math
 from datetime import datetime
 
 import torch
+from shapely import Polygon
 
 from ..data_preprocessing import NormalizationMode, normalize_data
 from .core import MODULE_CONFIG
@@ -20,6 +21,7 @@ NORMALIZATION_MODE: NormalizationMode = NormalizationMode(
     _environment_settings.get("normalization_mode")
 )
 
+LANE_POLYGONS: dict[int, Polygon] = {}
 LANE_UTILIZATION: dict[int, int] = {}
 
 
@@ -28,17 +30,11 @@ class VehicleState:
     Class representing the state of a vehicle in the lane allocation system, with 3D-aware speed estimation.
     """
 
-    def __init__(
-        self,
-        vehicle_id: int,
-        lane_id: int,
-        polygon_mask_px: tuple[float, ...],
-    ) -> None:
+    def __init__(self, vehicle_id: int, polygon_mask_px: tuple[float, ...]) -> None:
         """
         Initialize the VehicleState.
 
         :param vehicle_id: The ID of the vehicle.
-        :param lane_id: The lane the vehicle is in.
         :param polygon_mask_px: The polygon mask (4 points = 8 floats).
         """
         if not isinstance(polygon_mask_px, tuple) or len(polygon_mask_px) != 8:
@@ -47,12 +43,12 @@ class VehicleState:
             )
 
         self.vehicle_id = vehicle_id
-        self.lane_id = lane_id
         self.polygon_mask_px = polygon_mask_px
         self.speed = 0.0
         self.acceleration = 0.0
         self.last_updated = datetime.now()
 
+        lane_id = self.lane_id
         LANE_UTILIZATION.setdefault(lane_id, 0)
         LANE_UTILIZATION[lane_id] += 1
 
@@ -60,6 +56,27 @@ class VehicleState:
         self._last_center = self._calculate_center(polygon_mask_px)
         self._last_box_height = self._calculate_box_height(polygon_mask_px)
         self._last_depth = self._estimate_depth(self._last_box_height)
+
+    @property
+    def lane_id(self) -> int:
+        vehicle_polygon = Polygon(
+            list(zip(self.polygon_mask_px[::2], self.polygon_mask_px[1::2]))
+        )
+        max_intersection_area = 0
+        assigned_lane = -1
+
+        for lane_id, lane_polygon in LANE_POLYGONS.items():
+            intersection = vehicle_polygon.intersection(lane_polygon)
+            if intersection.area > max_intersection_area:
+                max_intersection_area = intersection.area
+                assigned_lane = lane_id
+
+        if assigned_lane == -1:
+            raise ValueError(
+                f"Vehicle {self.vehicle_id} is not in any lane. Polygon: {vehicle_polygon}"
+            )
+
+        return assigned_lane
 
     def _calculate_center(self, mask: tuple[float, ...]) -> tuple[float, float]:
         """Calculate center (x, y) from the polygon mask."""
@@ -177,10 +194,11 @@ class VehicleState:
 
     def remove(self) -> None:
         """Remove vehicle from lane utilization."""
-        if self.lane_id in LANE_UTILIZATION:
-            LANE_UTILIZATION[self.lane_id] -= 1
-            if LANE_UTILIZATION[self.lane_id] <= 0:
-                del LANE_UTILIZATION[self.lane_id]
+        lane_id = self.lane_id
+        if lane_id in LANE_UTILIZATION:
+            LANE_UTILIZATION[lane_id] -= 1
+            if LANE_UTILIZATION[lane_id] <= 0:
+                del LANE_UTILIZATION[lane_id]
 
     def __del__(self) -> None:
         """Destructor to clean up resources."""

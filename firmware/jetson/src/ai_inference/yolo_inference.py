@@ -7,7 +7,13 @@ import torch
 from ultralytics import YOLO
 
 from shared_src.common import Config
-from shared_src.data_preprocessing import BoxShape, box_to_polygon, build_edge_index
+from shared_src.data_preprocessing import (
+    BoxShape,
+    box_to_polygon,
+    build_edge_index,
+    parse_lane_polygons,
+)
+from shared_src.inference import LANE_POLYGONS
 from shared_src.inference import MODULE_CONFIG as VEHICLE_CONFIG
 from shared_src.inference import VehicleState
 
@@ -96,6 +102,7 @@ class YOLOInference(Model):
             dict: Dictionary containing vehicle states with vehicle IDs as keys.
             tuple: Tuple containing the feature vectors and edge index if return_tensors is True.
         """
+        global LANE_POLYGONS
         if len(data) != 1:
             raise ValueError("Expected one input: frame (np.ndarray)")
         frame = data[0]
@@ -109,6 +116,9 @@ class YOLOInference(Model):
             persist=True,
             project=self.cache_dir,
         )[0]
+
+        if not LANE_POLYGONS:
+            LANE_POLYGONS = parse_lane_polygons(result)
 
         boxes = result.boxes
         if not boxes or not boxes.is_track:
@@ -125,7 +135,6 @@ class YOLOInference(Model):
                 if id not in self._vehicle_states:
                     self._vehicle_states[id] = VehicleState(
                         vehicle_id=id,
-                        lane_id=1,
                         polygon_mask_px=polygon,
                     )
                 else:

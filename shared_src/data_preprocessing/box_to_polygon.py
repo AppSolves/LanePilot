@@ -3,6 +3,10 @@ from enum import Enum
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import torch
+from shapely import Polygon
+from ultralytics.engine.results import Results
+
 from .core import logger
 
 
@@ -119,3 +123,24 @@ def convert_class_to_segment(
     logger.debug(
         f"Finished converting class with ID '{class_id}' to segmentation element"
     )
+
+
+def parse_lane_polygons(result: Results, yolo_start_idx: int = 2) -> dict[int, Polygon]:
+    """Parse lane polygons from a YOLO tracking data."""
+
+    def _to_shapely(polygon: torch.Tensor) -> Polygon:
+        """Convert a tensor polygon to a Shapely Polygon."""
+        if polygon.dim() != 2 or polygon.size(1) != 2:
+            logger.error(f"Invalid polygon shape: {polygon.shape}")
+            raise ValueError("Polygon must be a 2D tensor with shape [n, 2].")
+        return Polygon(polygon.cpu().numpy())
+
+    if not result.masks or not result.boxes or not result.boxes.is_track:
+        logger.warning("YOLO: No tracking information available")
+        return {}
+
+    return {
+        i - yolo_start_idx: _to_shapely(result.masks.data[i])
+        for i, cls in enumerate(result.boxes.cls)
+        if int(cls) >= yolo_start_idx
+    }

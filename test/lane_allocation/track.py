@@ -9,8 +9,13 @@ from ai.lane_allocation import MODULE_CONFIG as GAT_CONFIG
 from ai.lane_allocation import LaneAllocationGAT
 from ai.vehicle_detection.core import Path, logger
 from shared_src.common import Config
-from shared_src.data_preprocessing import BoxShape, box_to_polygon, build_edge_index
-from shared_src.inference import NUM_LANES, VehicleState
+from shared_src.data_preprocessing import (
+    BoxShape,
+    box_to_polygon,
+    build_edge_index,
+    parse_lane_polygons,
+)
+from shared_src.inference import LANE_POLYGONS, NUM_LANES, VehicleState
 
 DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CACHE_DIR: Path = Path(str(Config.get("global_cache_dir"))) / "vehicle_detection"
@@ -31,6 +36,7 @@ def clean_vehicle_states(
 
 
 def main(PORT: int = 8000, confidence: float = 0.5) -> None:
+    global LANE_POLYGONS
     pipeline = f"srtsrc uri=srt://0.0.0.0:{PORT}?mode=listener&latency=1 ! queue ! tsdemux ! h264parse ! nvh264dec ! videoconvert ! appsink sync=false"
     cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
     if not cap.isOpened():
@@ -90,9 +96,13 @@ def main(PORT: int = 8000, confidence: float = 0.5) -> None:
             persist=True,
             project=CACHE_DIR / "runs" / "segment",
         )[0]
+
+        if not LANE_POLYGONS:
+            LANE_POLYGONS = parse_lane_polygons(result)
+
         boxes = result.boxes
         if not boxes or not boxes.is_track:
-            logger.warning("No tracking information available")
+            logger.warning("YOLO: No tracking information available")
             continue
 
         coords = boxes.xyxy
@@ -105,9 +115,11 @@ def main(PORT: int = 8000, confidence: float = 0.5) -> None:
                     id = int(id)
                     polygon = box_to_polygon(box, BoxShape.XYXY)
                     if id not in vehicle_states:
+                        LANE_POLYGONS = (
+                            {}
+                        )  # TODO: Load lane polygons from a config or file
                         vehicle_states[id] = VehicleState(
                             vehicle_id=id,
-                            lane_id=1,
                             polygon_mask_px=polygon,
                         )
                     else:

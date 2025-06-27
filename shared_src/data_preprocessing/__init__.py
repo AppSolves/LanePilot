@@ -1,4 +1,9 @@
-from .box_to_polygon import BoxShape, box_to_polygon, convert_class_to_segment
+from .box_to_polygon import (
+    BoxShape,
+    box_to_polygon,
+    convert_class_to_segment,
+    parse_lane_polygons,
+)
 from .core import logger
 from .edge_index import build_edge_index
 from .load_split import DatasetSplit, load_dataset_split
@@ -10,6 +15,7 @@ __all__ = [
     "BoxShape",
     "box_to_polygon",
     "convert_class_to_segment",
+    "parse_lane_polygons",
     "unpack_dataset",
     "NormalizationMode",
     "normalize_data",
