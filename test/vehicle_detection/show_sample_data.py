@@ -18,7 +18,7 @@ color_map = {
 
 def read_image(image_path: Path):
     """Read an image from a file path using cv2"""
-    image = cv2.imread(image_path)
+    image = cv2.imread(image_path.as_posix())
     if image is None:
         raise ValueError(f"Image at {image_path} could not be read.")
     return image
@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     samples_dir = (
         Path(str(Config.get("global_cache_dir"))) / "vehicle_detection" / "train"
-    )
+    ).resolve()
     image_folder = samples_dir / "images"
     label_folder = samples_dir / "labels"
     num_samples = args.num_samples
