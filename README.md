@@ -1,3 +1,7 @@
+> [!IMPORTANT]
+> This version is outdated. Please switch to the latest [v2 branch](https://github.com/AppSolves/LanePilot/tree/v2) for the latest updates, bug fixes, and improvements.
+
+<br>
 <div align="center">
 
 <img src="./assets/github/mockup.gif" alt="LanePilot" width="100%" height="auto" min-height="50vw">
