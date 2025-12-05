@@ -29,7 +29,7 @@ if [[ "$TARGET" != "raspberrypi" && "$TARGET" != "jetson" ]]; then
 fi
 
 # Set the URL for the remote compose.yaml
-COMPOSE_URL="https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/v1/firmware/$TARGET/compose.yaml"
+COMPOSE_URL="https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/v2/firmware/$TARGET/compose.yaml"
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then

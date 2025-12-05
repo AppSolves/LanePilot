@@ -11,7 +11,7 @@ FROM --platform=${PLATFORM} ghcr.io/appsolves/lanepilot/opencv_base:${BASE_IMAGE
 LABEL org.opencontainers.image.authors="contact@appsolves.dev"
 LABEL org.opencontainers.image.source=https://github.com/AppSolves/LanePilot
 LABEL org.opencontainers.image.description="The official Docker image for the NVIDIA Jetson Orin, used to run the LanePilot application. See the repo's `README.md` for more information."
-LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/v1/LICENSE.md
+LABEL org.opencontainers.image.licenses=https://raw.githubusercontent.com/AppSolves/LanePilot/refs/heads/v2/LICENSE.md
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
