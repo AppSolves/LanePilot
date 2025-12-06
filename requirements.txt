@@ -14,7 +14,7 @@ coloredlogs==15.0.1
 contourpy==1.3.3
 cppimport==22.8.2
 cuda-toolkit==13.0.1
-cupy-cuda12x==13.6.0
+cupy-cuda13x==13.6.0
 cycler==0.12.1
 datasets==4.4.1
 diffusers==0.35.2
@@ -26,7 +26,7 @@ Flask==3.1.2
 flatbuffers==25.9.23
 fonttools==4.61.0
 frozenlist==1.8.0
-fsspec==2025.12.0
+fsspec==2025.10.0
 h11==0.16.0
 hf-xet==1.2.0
 httpcore==1.0.9
@@ -54,7 +54,6 @@ networkx==3.6
 ninja==1.13.0
 numpy==2.2.6
 nvidia-cuda-runtime==13.0.88
-nvidia-cuda-runtime-cu12==12.9.79
 nvidia-ml-py==13.580.82
 onnx==1.20.0
 onnx-ir==0.1.12
@@ -74,7 +73,7 @@ platformdirs==4.5.1
 polars==1.35.2
 polars-runtime-32==1.35.2
 propcache==0.4.1
-protobuf==6.33.1
+protobuf==6.33.2
 psutil==7.1.3
 PuLP==3.3.0
 py-cpuinfo==9.0.0
@@ -108,9 +107,6 @@ siphash24==1.8
 six==1.17.0
 sympy==1.14.0
 tensorrt==10.13.3.9.post1
-tensorrt_cu12==10.14.1.48.post1
-tensorrt_cu12_bindings==10.14.1.48.post1
-tensorrt_cu12_libs==10.14.1.48.post1
 tensorrt_cu13==10.13.3.9.post1
 tensorrt_cu13_bindings==10.13.3.9.post1
 tensorrt_cu13_libs==10.13.3.9.post1
@@ -130,7 +126,7 @@ typing_extensions==4.15.0
 tzdata==2025.2
 ultralytics==8.3.235
 ultralytics-thop==2.0.18
-urllib3==2.5.0
+urllib3==2.6.0
 Werkzeug==3.1.4
 xxhash==3.6.0
 yarl==1.22.0
