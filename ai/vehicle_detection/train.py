@@ -2,7 +2,7 @@ import os
 import shutil
 from pathlib import Path
 
-from ultralytics import YOLO
+from ultralytics.models import YOLO
 
 from shared_src.data_preprocessing import convert_class_to_segment, unpack_dataset
 from shared_src.postprocessing import export_model_to_trt
@@ -17,8 +17,8 @@ def train():
         FileNotFoundError: If the config file is not found.
     """
     # Load the training configuration
-    model_config = MODULE_CONFIG.get("model")
-    dataset_config = MODULE_CONFIG.get("dataset")
+    model_config = MODULE_CONFIG.get("model", {})
+    dataset_config = MODULE_CONFIG.get("dataset", {})
 
     model_name = model_config.get("name")
     dataset_path = Path(dataset_config.get("path"))
