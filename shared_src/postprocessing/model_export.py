@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 import torch
-from ultralytics import YOLO
+from ultralytics.models import YOLO
 
 from .core import logger
 

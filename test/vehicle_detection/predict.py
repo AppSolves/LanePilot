@@ -1,6 +1,6 @@
 import argparse
 
-from ultralytics import YOLO
+from ultralytics.models import YOLO
 
 from ai.vehicle_detection.core import Path, logger
 from shared_src.common import Config

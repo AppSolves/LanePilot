@@ -17,11 +17,15 @@ class BoxShape(Enum):
     XCYCWH = "xcycwh"
 
 
-def box_to_polygon(box: tuple[float, ...], box_shape: BoxShape) -> tuple[float, ...]:
+def box_to_polygon(
+    box: tuple[float, ...] | torch.Tensor,
+    box_shape: BoxShape,
+) -> tuple[float, ...]:
     """Convert a bounding box to a polygon."""
 
     # Check if the box is a tuple of the expected format
-    if len(box) != 4:
+    box_len = len(box) if isinstance(box, tuple) else box.size(0)
+    if box_len != 4:
         logger.error(f"Invalid box format: {box}")
         raise ValueError(
             "Box must be a list of four floats. Is the passed object really a box?"
@@ -30,10 +34,12 @@ def box_to_polygon(box: tuple[float, ...], box_shape: BoxShape) -> tuple[float, 
     # Unpack the box tuple and calculate the polygon coordinates
     match box_shape:
         case BoxShape.XYXY:
-            x_min, y_min, x_max, y_max = box
+            x_min, y_min, x_max, y_max = box if isinstance(box, tuple) else box.tolist()
 
         case BoxShape.XCYCWH:
-            x_center, y_center, width, height = box
+            x_center, y_center, width, height = (
+                box if isinstance(box, tuple) else box.tolist()
+            )
             x_min = x_center - width / 2
             y_min = y_center - height / 2
             x_max = x_center + width / 2

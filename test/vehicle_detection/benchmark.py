@@ -1,9 +1,11 @@
 # Load both the pt and the trt model and test how long they took for inference
 import argparse
 from pathlib import Path
+from typing import cast
 
 import cv2
-from ultralytics import YOLO
+import numpy as np
+from ultralytics.models import YOLO
 
 from ai.vehicle_detection.core import logger
 from shared_src.common import Config
@@ -44,7 +46,7 @@ def benchmark_model(model: YOLO, image_path: Path):
 
     # Perform inference
     model.predict(
-        source=image,
+        source=cast(np.ndarray, image),
         conf=0.5,
         project=CACHE_DIR / "runs" / "segment",
     )

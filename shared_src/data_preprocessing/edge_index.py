@@ -1,12 +1,32 @@
+from typing import Literal, overload
+
 import torch
 
 
+@overload
 def build_edge_index(
     x: torch.Tensor,
+    return_weights: Literal[False] = False,
     lane_tolerance: int = 1,
     max_distance: float = 10.0,
     bidirectional: bool = True,
+    weight_type: str = "inverse",  # "inverse", "linear", or "none"
+) -> torch.Tensor: ...
+@overload
+def build_edge_index(
+    x: torch.Tensor,
+    return_weights: Literal[True],
+    lane_tolerance: int = 1,
+    max_distance: float = 10.0,
+    bidirectional: bool = True,
+    weight_type: str = "inverse",  # "inverse", "linear", or "none"
+) -> tuple[torch.Tensor, torch.Tensor]: ...
+def build_edge_index(
+    x: torch.Tensor,
     return_weights: bool = False,
+    lane_tolerance: int = 1,
+    max_distance: float = 10.0,
+    bidirectional: bool = True,
     weight_type: str = "inverse",  # "inverse", "linear", or "none"
 ) -> tuple[torch.Tensor, torch.Tensor] | torch.Tensor:
     """

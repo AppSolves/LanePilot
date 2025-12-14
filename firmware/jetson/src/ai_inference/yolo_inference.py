@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 import numpy as np
 import torch
-from ultralytics import YOLO
+from ultralytics.models import YOLO
 
 from shared_src.common import Config
 from shared_src.data_preprocessing import (
@@ -127,6 +127,10 @@ class YOLOInference(Model):
 
         coords = boxes.xyxy
         ids = boxes.id
+
+        if ids is None or coords is None:
+            logger.warning("YOLO: No vehicle IDs or coordinates detected")
+            return
 
         for id, box in zip(ids, coords):
             if box is not None and len(box) == 4:
