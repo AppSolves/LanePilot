@@ -17,6 +17,10 @@ from shared_src.inference import MODULE_CONFIG as GAT_CONFIG
 
 def plot_graph(index: int, data: Data, seed: int, num_lanes: int):
     # Convert edge_index to numpy for easier handling
+    if data.edge_index is None or data.x is None:
+        print(f"Graph {index} has no edges or nodes to display.")
+        return
+
     edge_index = data.edge_index.cpu().numpy()
     G = nx.DiGraph()
     # Add nodes with optional feature labels
@@ -38,6 +42,8 @@ def plot_graph(index: int, data: Data, seed: int, num_lanes: int):
 
     # Connect each vehicle node to its lane node according to data.y
     for i in range(data.x.size(0)):
+        if not isinstance(data.y, torch.Tensor):
+            continue
         lane = int(data.y[i].item())
         G.add_edge(i, f"Lane{lane}")
 
@@ -48,7 +54,7 @@ def plot_graph(index: int, data: Data, seed: int, num_lanes: int):
     # Move lane nodes to the right
     for lane in range(num_lanes):
         max_x = max(pos[i][0] for i in range(data.x.size(0)))
-        pos[f"Lane{lane}"] = (
+        pos[f"Lane{lane}"] = (  # type: ignore
             max_x + lane_offset,
             lane_offset - (lane + 1) * lane_offset,  # Vertical placement
         )
@@ -143,7 +149,7 @@ def main():
     plt.rcParams["font.family"] = args.font_family
 
     # Set seed for reproducibility
-    environment = GAT_CONFIG.get("environment")
+    environment = GAT_CONFIG.get("environment", {})
     num_lanes = environment.get("num_lanes")
     seed = environment.get("seed")
     torch.manual_seed(seed)
@@ -169,4 +175,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Visualization interrupted by user.")
