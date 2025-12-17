@@ -63,7 +63,7 @@ def plot_graph(index: int, data: Data, seed: int, num_lanes: int):
         else:
             node_colors.append("skyblue")
             try:
-                maximum = max(dst_counter)
+                maximum = max(dst_counter) or 1
             except ValueError:
                 maximum = 1
             node_sizes.append(750 * (dst_counter.get(n, 1) / maximum))
