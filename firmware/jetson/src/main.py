@@ -1,7 +1,7 @@
 import signal
 from pathlib import Path
 
-from firmware.jetson.src.ai_inference import GATInference, ModelPipeline, YOLOInference
+from firmware.jetson.src.ai_inference import ModelPipeline, RLInference, YOLOInference
 from shared_src.common import Config, StoppableThread, run_with_retry, stop_threads
 from shared_src.network import NETWORK_CONFIG, ServerClient, respond_to_broadcast
 
@@ -43,7 +43,7 @@ def start_network(
                 model_paths / "vehicle_detection" / "vehicle_detection.engine",
                 return_tensors=True,
             ),
-            GATInference(
+            RLInference(
                 model_paths / "lane_allocation" / "lane_allocation.engine",
                 enable_host_code=True,
             ),

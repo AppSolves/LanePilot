@@ -7,19 +7,14 @@ import torch
 from ultralytics.models import YOLO
 
 from shared_src.common import Config
-from shared_src.data_preprocessing import (
-    BoxShape,
-    box_to_polygon,
-    build_edge_index,
-    parse_lane_polygons,
-)
+from shared_src.data_preprocessing import BoxShape, box_to_polygon, parse_lane_polygons
 from shared_src.inference import LANE_POLYGONS
 from shared_src.inference import MODULE_CONFIG as VEHICLE_CONFIG
 from shared_src.inference import VehicleState
 
 from .core import logger
-from .gat_inference import GATInference
 from .pipeline import Model
+from .rl_inference import RLInference
 
 
 class YOLOInference(Model):
@@ -50,7 +45,7 @@ class YOLOInference(Model):
         self.cleanup_timeout = cleanup_timeout
         self._last_cleanup_time = time.time()
         self.vehicle_config = VEHICLE_CONFIG.get("vehicle", {})
-        self._tensor_cache: dict[int, tuple[float, torch.Tensor, torch.Tensor]] = {}
+        self._tensor_cache: dict[int, tuple[float, torch.Tensor]] = {}
         super().__init__(model_path)
 
     def _load(self):
@@ -78,7 +73,7 @@ class YOLOInference(Model):
         # Clean up stale tensor cache entries
         stale_tensors = tuple(
             tensor_id
-            for tensor_id, (timestamp, _, _) in self._tensor_cache.items()
+            for tensor_id, (timestamp, _) in self._tensor_cache.items()
             if current_time - timestamp > self.cleanup_timeout
         )
         for tensor_id in stale_tensors:
@@ -93,14 +88,14 @@ class YOLOInference(Model):
 
     def infer(
         self, *data: Any
-    ) -> Optional[dict[int | float, VehicleState] | tuple[torch.Tensor, torch.Tensor]]:
+    ) -> Optional[dict[int | float, VehicleState] | torch.Tensor]:
         """
         Perform inference on the input frame using the YOLO model.
         Args:
             frame (np.ndarray): The input frame (OpenCV image).
         Returns:
             dict: Dictionary containing vehicle states with vehicle IDs as keys.
-            tuple: Tuple containing the feature vectors and edge index if return_tensors is True.
+            tuple: Tuple containing the feature vectors if return_tensors is True.
         """
         global LANE_POLYGONS
         if len(data) != 1:
@@ -155,11 +150,11 @@ class YOLOInference(Model):
             return self._to_tensor()
         return self._vehicle_states
 
-    def _to_tensor(self) -> tuple[torch.Tensor, torch.Tensor]:
+    def _to_tensor(self) -> torch.Tensor:
         """
         Convert vehicle states to tensors for model input.
         Returns:
-            tuple: Tuple containing the feature vectors and edge index.
+            torch.Tensor: Tensor containing the feature vectors.
         """
         # Maintain a list of the vehicles' feature vectors
         ids, states = zip(*self._vehicle_states.items())
@@ -167,25 +162,19 @@ class YOLOInference(Model):
 
         # Build edge index if needed
         if id_hash in self._tensor_cache:
-            x, edge_index = self._tensor_cache[id_hash][1:]
-            return x, edge_index
+            x = self._tensor_cache[id_hash][1]
+            return x
         else:
             feature_vectors = tuple(state.feature_vector for state in states)
 
             # Stack the feature vectors into a tensor
             x = torch.stack(feature_vectors).to(self.model.device)
 
-            # Build edge index
-            edge_index = build_edge_index(
-                x,
-                max_distance=self.vehicle_config.get("max_distance_cm", 10),
-            )
-
             # Ensure input validity
-            assert GATInference._check_inputs(x, edge_index)
+            assert RLInference._check_inputs(x)
 
-            self._tensor_cache[id_hash] = (time.time(), x, edge_index)
-            return x, edge_index
+            self._tensor_cache[id_hash] = (time.time(), x)
+            return x
 
     def dispose(self):
         """

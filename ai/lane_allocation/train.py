@@ -1,199 +1,264 @@
-import shutil
-from pathlib import Path
+import os
+from datetime import datetime
 
-import torch
-from torch_geometric.loader import DataLoader
-
-from shared_src.data_preprocessing import (
-    DatasetSplit,
-    load_dataset_split,
-    unpack_dataset,
+import numpy as np
+from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import (
+    BaseCallback,
+    CheckpointCallback,
+    EvalCallback,
 )
-from shared_src.inference import MAX_VEHICLES_PER_LANE, NUM_LANES
-from shared_src.postprocessing import export_model_to_trt
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv
 
-from .core import MODULE_CONFIG, Config, logger
-from .early_stopping import EarlyStopping
-from .model import LaneAllocationGAT
+from .environment import load_rl_env
+from .model import AttentionPolicyNetwork, SimpleMLPExtractor
 
 
-def train():
-    """Main function to train the GAT."""
-    # Set seed for reproducibility
-    environment = MODULE_CONFIG.get("environment")
-    seed = environment.get("seed")
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+class MetricsCallback(BaseCallback):
+    """Custom callback for logging traffic flow metrics."""
 
-    dataset_config = MODULE_CONFIG.get("dataset", {})
-    dataset_path = Path(dataset_config.get("path"))
-    logger.debug(f"Dataset path: {dataset_path}")
+    def __init__(self, verbose=0):
+        super().__init__(verbose)
+        self.episode_rewards = []
+        self.episode_lengths = []
+        self.episode_metrics = []
 
-    if not dataset_path:
-        logger.error("Dataset path is not provided.")
-        raise ValueError("Dataset path must be provided.")
+    def _on_step(self) -> bool:
+        # Check if episode is done
+        for idx, done in enumerate(self.locals.get("dones", [])):
+            if done:
+                # Access unwrapped environment
+                if hasattr(self.training_env, "envs"):
+                    env = self.training_env.envs[idx]  # type: ignore
+                    if hasattr(env, "get_metrics"):
+                        metrics = env.get_metrics()
+                        self.episode_metrics.append(metrics)
 
-    model_config = MODULE_CONFIG.get("model", {})
-    num_epochs = model_config.get("num_epochs")
-    batch_size = model_config.get("batch_size")
-    num_heads = model_config.get("num_heads")
-    hidden_dim = model_config.get("hidden_dim")
+                        if self.verbose > 0 and len(self.episode_metrics) % 10 == 0:
+                            recent_metrics = self.episode_metrics[-10:]
+                            avg_speed = np.mean(
+                                [m.get("avg_speed", 0) for m in recent_metrics]
+                            )
+                            avg_lane_changes = np.mean(
+                                [m.get("lane_changes", 0) for m in recent_metrics]
+                            )
+                            print(f"\n=== Last 10 Episodes Metrics ===")
+                            print(f"Avg Speed: {avg_speed:.2f} m/s")
+                            print(f"Avg Lane Changes: {avg_lane_changes:.1f}")
+                            print(
+                                f"Avg Reward: {np.mean([m.get('total_reward', 0) for m in recent_metrics]):.2f}"
+                            )
 
-    vehicle_settings = MODULE_CONFIG.get("vehicle", {})
-    max_distance_cm = vehicle_settings.get("max_distance_cm")
+        return True
 
-    dataset_path = unpack_dataset(dataset_path, "lane_allocation")
-    train_dataset = load_dataset_split(
-        dataset_path, DatasetSplit.TRAIN, device, max_distance_cm
-    )
-    val_dataset = load_dataset_split(
-        dataset_path, DatasetSplit.VALIDATION, device, max_distance_cm
-    )
-    test_dataset = load_dataset_split(
-        dataset_path, DatasetSplit.TEST, device, max_distance_cm
-    )
 
-    # Get class weights for the dataset
-    class_counts = [0] * NUM_LANES
-    for data in train_dataset:
-        for label in data.y:
-            class_counts[label.item()] += 1
-    total_preds = sum(class_counts)
-    class_weights = {
-        i: 100 * round(count / total_preds, 3) for i, count in enumerate(class_counts)
-    }
-    label_weights = torch.tensor(
-        tuple(100 / value for value in class_weights.values()), dtype=torch.float32
-    )
-    label_weights = label_weights / label_weights.mean()
-    logger.debug(f"Class counts (in %): {class_weights} | Weights: {label_weights}")
+class CurriculumCallback(BaseCallback):
+    """Gradually increase spawn rate (traffic density) during training."""
 
-    num_features = train_dataset[0].x.shape[1]
+    def __init__(
+        self,
+        initial_spawn_rate=0.3,
+        final_spawn_rate=0.8,
+        steps_to_final=200_000,
+        verbose=0,
+    ):
+        super().__init__(verbose)
+        self.initial_spawn_rate = initial_spawn_rate
+        self.final_spawn_rate = final_spawn_rate
+        self.steps_to_final = steps_to_final
 
-    early_stopping_config = MODULE_CONFIG.get("early_stopping", {})
-    patience = early_stopping_config.get("patience")
-
-    optimizer_config = MODULE_CONFIG.get("optimizer", {})
-    learning_rate = optimizer_config.get("learning_rate")
-    weight_decay = optimizer_config.get("weight_decay")
-    epsilon = optimizer_config.get("epsilon")
-    t_0 = optimizer_config.get("t_0")
-    t_mult = optimizer_config.get("t_mult")
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size)
-    model = LaneAllocationGAT(
-        input_dim=num_features, hidden_dim=hidden_dim, heads=num_heads
-    ).to(device)
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=learning_rate, weight_decay=weight_decay, eps=epsilon
-    )
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer, T_0=t_0, T_mult=t_mult, eta_min=learning_rate / 100
-    )
-    criterion = torch.nn.CrossEntropyLoss(weight=label_weights.to(device)).to(device)
-    early_stopping = EarlyStopping(patience)
-
-    logger.info("🔧 Training starting...\n")
-    iters = len(train_loader)
-    for epoch in range(1, num_epochs + 1):
-        model.train()
-        total_loss = 0
-
-        for i, batch in enumerate(train_loader):
-            batch = batch.to(device)
-            optimizer.zero_grad()
-            outputs: torch.Tensor = model(batch.x, batch.edge_index, batch.batch)
-
-            loss = criterion(outputs, batch.y)
-            total_loss += loss.item()
-            loss.backward()
-            optimizer.step()
-            lr_scheduler.step(epoch + i / iters)
-
-        # Validation phase
-        model.eval()
-        val_loss = 0
-        correct_preds = 0
-        total_preds = 0
-        with torch.no_grad():
-            for batch in val_loader:
-                batch = batch.to(device)
-                outputs = model(batch.x, batch.edge_index, batch.batch)
-                loss = criterion(outputs, batch.y)
-                val_loss += loss.item()
-
-                prediction = outputs.argmax(dim=1)
-                correct_preds += (prediction == batch.y).sum().item()
-                total_preds += batch.y.size(0)
-
-        accuracy = (correct_preds / total_preds) * 100
-
-        logger.debug(
-            f"Epoch {epoch:2d} | Training Loss: {total_loss:.4f} | Validation Loss: {val_loss:.4f} | Validation Accuracy: {accuracy:.2f}%"
+    def _on_step(self) -> bool:
+        # Linear curriculum
+        progress = min(1.0, self.num_timesteps / self.steps_to_final)
+        current_spawn_rate = (
+            self.initial_spawn_rate
+            + (self.final_spawn_rate - self.initial_spawn_rate) * progress
         )
 
-        # Check early stopping
-        if early_stopping(epoch, val_loss, model, optimizer, criterion):
-            logger.info("⏹️  Early stopping triggered.")
-            break
+        # Update all environments
+        if hasattr(self.training_env, "envs"):
+            for env in self.training_env.envs:  # type: ignore
+                if hasattr(env, "spawn_rate"):
+                    env.spawn_rate = current_spawn_rate
 
-    # Save the model
-    logger.info("Saving the model...")
-    best_model_path = early_stopping.best_model_path
-    model_save_path = (
-        Path(str(Config.get("global_assets_dir")))
-        / "trained_models"
-        / "lane_allocation"
-        / "lane_allocation.pt"
-    )
-    model_save_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(
-        best_model_path,
-        model_save_path,
-    )
-    logger.info(f"Model saved to {model_save_path}")
+        if self.verbose > 0 and self.num_timesteps % 10000 == 0:
+            print(f"Spawn rate updated to: {current_spawn_rate:.3f}")
 
-    # Load the best model checkpoint again and test it
-    model.inference(
-        model_save_path,
-        device,
-    )
-
-    accuracy = model.test(test_loader)
-    logger.info(f"Accuracy on test split: {accuracy:.2f}%\n")
-    logger.info("✅ Training completed successfully! 🚀")
-
-    # Export the model to ONNX format
-    dummy_input = (
-        torch.randn(test_dataset[0].x.shape).to(device),
-        test_dataset[0].edge_index.to(device).long(),
-    )
-    export_model_to_trt(
-        model,
-        (
-            Path(str(Config.get("global_assets_dir")))
-            / "trained_models"
-            / "lane_allocation"
-            / "lane_allocation.onnx"
-        ),
-        dummy_input,
-        input_names=["x", "edge_index"],
-        output_names=["output"],
-        dynamic_axes={
-            "x": {0: "num_nodes"},
-            "edge_index": {1: "num_edges"},
-            "output": {0: "num_nodes"},
-        },
-        shapes={
-            "min_shapes": f"x:1x{num_features},edge_index:2x1",
-            "opt_shapes": f"x:{MAX_VEHICLES_PER_LANE}x{num_features},edge_index:2x{MAX_VEHICLES_PER_LANE * 2}",
-            "max_shapes": f"x:{MAX_VEHICLES_PER_LANE ** 2}x{num_features},edge_index:2x{(MAX_VEHICLES_PER_LANE * 2) ** 2}",
-        },
-    )
+        return True
 
 
 if __name__ == "__main__":
-    train()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Train RL Lane Allocation Agent")
+    parser.add_argument(
+        "--timesteps", type=int, default=500_000, help="Total training timesteps"
+    )
+    parser.add_argument(
+        "--attention", action="store_true", default=True, help="Use attention policy"
+    )
+    parser.add_argument(
+        "--mlp", action="store_true", help="Use MLP policy instead of attention"
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        choices=["cpu", "cuda"],
+        help="Training device",
+    )
+    parser.add_argument(
+        "--n-envs", type=int, default=4, help="Number of parallel environments"
+    )
+    parser.add_argument("--logdir", type=str, default="./logs", help="Log directory")
+    parser.add_argument(
+        "--spawn-rate", type=float, default=0.3, help="Initial spawn rate"
+    )
+    args = parser.parse_args()
+
+    # Override attention if MLP specified
+    use_attention = args.attention and not args.mlp
+
+    # Create timestamped log directory
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    logdir = os.path.join(args.logdir, f"ppo_lane_allocation_{timestamp}")
+    os.makedirs(logdir, exist_ok=True)
+
+    print("=" * 60)
+    print("Training RL Lane Allocation Agent")
+    print("=" * 60)
+    print(f"Device: {args.device}")
+    print(f"Timesteps: {args.timesteps:,}")
+    print(f"Policy: {'Attention' if use_attention else 'MLP'}")
+    print(f"Parallel Envs: {args.n_envs}")
+
+    # Environment configuration
+    config = {
+        "num_lanes": 3,
+        "road_length": 1000.0,
+        "dt": 0.2,
+        "spawn_rate": args.spawn_rate,  # Start with lower traffic, curriculum will increase
+        "max_episode_steps": 300,
+        "max_speed": 33.33,  # ~120 km/h
+        "min_speed": 8.33,  # ~30 km/h
+    }
+
+    # Create environments
+    def make_env():
+        env = load_rl_env(config)
+        env = Monitor(env)
+        return env
+
+    # Training environment
+    vec_env = DummyVecEnv([make_env for _ in range(args.n_envs)])  # Parallel envs
+
+    # Evaluation environment
+    eval_env = DummyVecEnv([make_env])
+
+    print(
+        f"\nEnvironment: {config['num_lanes']} lanes, {config['road_length']}m length"
+    )
+    print(f"Observation space: {vec_env.observation_space}")
+    print(f"Action space: {vec_env.action_space}")
+
+    policy_kwargs = {
+        "features_extractor_class": (
+            AttentionPolicyNetwork if use_attention else SimpleMLPExtractor
+        ),
+        "features_extractor_kwargs": (
+            {
+                "features_dim": 128,
+                "num_attention_heads": 4,
+                "hidden_dim": 128,
+            }
+            if use_attention
+            else {"features_dim": 128}
+        ),
+        "net_arch": [
+            dict(pi=[128, 64], vf=[128, 64])
+        ],  # Separate networks for policy and value
+    }
+
+    print(f"\nUsing {'Attention-based' if use_attention else 'MLP'} policy network")
+
+    # Create PPO agent
+    model = PPO(
+        "MlpPolicy",
+        vec_env,
+        policy_kwargs=policy_kwargs,
+        verbose=1,
+        learning_rate=3e-4,
+        n_steps=2048,
+        batch_size=64,
+        n_epochs=10,
+        gamma=0.99,
+        gae_lambda=0.95,
+        clip_range=0.2,
+        ent_coef=0.01,  # Entropy bonus for exploration
+        vf_coef=0.5,
+        max_grad_norm=0.5,
+        tensorboard_log=logdir,
+        device=args.device,
+    )
+
+    # Setup callbacks
+    checkpoint_callback = CheckpointCallback(
+        save_freq=20000,
+        save_path=logdir,
+        name_prefix="ppo_lane",
+        save_vecnormalize=True,
+    )
+
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path=logdir,
+        log_path=logdir,
+        eval_freq=10000,
+        deterministic=True,
+        render=False,
+    )
+
+    metrics_callback = MetricsCallback(verbose=1)
+    curriculum_callback = CurriculumCallback(
+        initial_spawn_rate=0.3,
+        final_spawn_rate=0.8,
+        steps_to_final=200_000,
+        verbose=1,
+    )
+
+    callbacks = [
+        checkpoint_callback,
+        eval_callback,
+        metrics_callback,
+        curriculum_callback,
+    ]
+
+    print("\n" + "=" * 60)
+    print("Starting Training...")
+    print("=" * 60)
+
+    # Train the model
+    try:
+        model.learn(
+            total_timesteps=args.timesteps,
+            callback=callbacks,
+            progress_bar=True,
+        )
+    except KeyboardInterrupt:
+        print("\n⚠️  Training interrupted by user")
+    except Exception as e:
+        print(f"\n❌ Training failed: {e}")
+        raise
+
+    # Save final model
+    final_path = os.path.join(logdir, "ppo_lane_final")
+    model.save(final_path)
+    print(f"\nFinal model saved to: {final_path}")
+
+    print("\n" + "=" * 60)
+    print("Training Complete!")
+    print("=" * 60)
+    print(f"Logs saved to: {logdir}")
+    print("\nTo view training progress, run:")
+    print(f"  tensorboard --logdir {logdir}")

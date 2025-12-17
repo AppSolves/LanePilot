@@ -112,11 +112,12 @@ class ModelPipeline(StoppableThread, metaclass=Final):
         """
         return self.input(*data)
 
-    def input(self, *data: Any):
+    def input(self, *data: Any) -> torch.Tensor:
         """
         Process the input data through the pipeline of models.
         This method is called when new data is available for inference.
         """
+        output: torch.Tensor = data[0]
         for model in self.__models:
             output = model(*data)
         self.__pipeline_buffer.put(output)
