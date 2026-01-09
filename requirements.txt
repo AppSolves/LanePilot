@@ -5,7 +5,7 @@ aiohttp==3.13.3
 aiosignal==1.4.0
 ale-py==0.11.2
 annotated-types==0.7.0
-anyio==4.12.0
+anyio==4.12.1
 attrs==25.4.0
 blinker==1.9.0
 certifi==2026.1.4
@@ -63,7 +63,7 @@ numpy==2.2.6
 nvidia-cuda-runtime==13.1.80
 nvidia-ml-py==13.590.44
 onnx==1.20.0
-onnx-ir==0.1.13
+onnx-ir==0.1.14
 onnx_graphsurgeon==0.5.8
 onnxconverter-common==1.16.0
 onnxruntime-directml==1.23.0
@@ -74,7 +74,7 @@ opencv-contrib-python==4.12.0.88
 opencv-python==4.12.0.88
 packaging==25.0
 pandas==2.3.3
-peft==0.18.0
+peft==0.18.1
 pillow==12.1.0
 platformdirs==4.5.1
 polars==1.36.1
@@ -130,14 +130,14 @@ torchprofile==0.0.4
 torchvision==0.24.1+cu130
 tqdm==4.67.1
 transformers==4.57.3
-typer-slim==0.21.0
+typer-slim==0.21.1
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.3
-ultralytics==8.3.248
+ultralytics==8.3.250
 ultralytics-thop==2.0.18
-urllib3==2.6.2
-Werkzeug==3.1.4
+urllib3==2.6.3
+Werkzeug==3.1.5
 xxhash==3.6.0
 yarl==1.22.0
 zipp==3.23.0
