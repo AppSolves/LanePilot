@@ -38,7 +38,7 @@ training:
 
   # Logging
   tensorboard_log: true # Enable TensorBoard logging
-  log_dir: "./logs" # Log directory
+  log_dir: "./runtime/logs" # Log directory
   verbose: 1 # Verbosity level (0, 1, 2)
 
 # Policy Network Configuration

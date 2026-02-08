@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # Create timestamped log directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     logdir = os.path.join(
-        train_config.get("log_dir", "./logs"),
+        train_config.get("log_dir", "./runtime/logs"),
         f"ppo_lane_allocation_{timestamp}",
     )
     os.makedirs(logdir, exist_ok=True)

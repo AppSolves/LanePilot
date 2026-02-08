@@ -30,7 +30,9 @@ def evaluate_model(
     env_config = config.get_environment_config()
 
     # Use provided values or fall back to config
-    model_path = model_path or eval_config.get("model_path", "./logs/ppo_lane_final")
+    model_path = model_path or eval_config.get(
+        "model_path", "./runtime/logs/ppo_lane_final"
+    )
     num_episodes = num_episodes or eval_config.get("num_episodes", 10)
     render = render or eval_config.get("render", False)
     print("=" * 60)
