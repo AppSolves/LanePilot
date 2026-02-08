@@ -15,16 +15,26 @@ class RLInference(Model):
     """
     RLInference class for performing lane allocation inference using a TensorRT engine.
     This class loads a TensorRT-optimized PPO policy network and performs inference
-    on observation vectors (15-dimensional state representations).
+    on observation vectors for multi-vehicle centralized traffic control.
 
-    Expected input: Single observation vector of shape [15] containing:
-    [lane, speed, acc, gaps, relative_speeds, lane_densities, lane_avg_speeds]
+    Expected input: Global observation vector of shape [81] containing:
+        - 15 vehicles * 5 features = 75 dims: [lane, speed, acc, front_gap, rear_gap] per vehicle
+        - 6 global features: [lane_densities (3), lane_avg_speeds (3)]
 
-    Output: Lane change action (0=keep, 1=left, 2=right)
+    Output: Array of actions for all vehicles, shape [15] where each action is:
+        0 = keep_lane, 1 = change_left, 2 = change_right
     """
 
-    def __init__(self, model_path: Path, enable_host_code: bool = False):
+    def __init__(
+        self,
+        model_path: Path,
+        enable_host_code: bool = False,
+        max_vehicles: int = 15,
+    ):
         self.enable_host_code = enable_host_code
+        self.max_vehicles = max_vehicles
+        self.obs_dim = max_vehicles * 5 + 6  # 81 for 15 vehicles
+        self.action_dim = max_vehicles * 3  # 45 logits (15 vehicles * 3 actions)
         super().__init__(model_path)
 
     def _load(self):
@@ -48,16 +58,19 @@ class RLInference(Model):
         self.context = self.engine.create_execution_context()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def infer(self, *data: Any) -> int:
+    def infer(self, *data: Any) -> np.ndarray:
         """
         Perform inference using the TensorRT engine.
 
         Args:
             *data: Variable arguments. Expects single observation vector as first argument.
-                   observation: np.ndarray or torch.Tensor of shape [15] containing normalized state features.
+                   observation: np.ndarray or torch.Tensor of shape [81] containing:
+                       - 75 vehicle features (15 vehicles * 5 features each)
+                       - 6 global features (lane densities + avg speeds)
 
         Returns:
-            int: Predicted action (0=keep_lane, 1=change_left, 2=change_right)
+            np.ndarray: Array of predicted actions, shape [15], one action per vehicle.
+                       Each action is: 0=keep_lane, 1=change_left, 2=change_right
         """
         if len(data) == 0:
             raise ValueError("Expected at least one argument: observation vector")
@@ -74,15 +87,17 @@ class RLInference(Model):
         else:
             obs_tensor = observation.float()
 
-        # Ensure correct shape: [1, 15] for batch inference
+        # Ensure correct shape: [1, 81] for batch inference
         if obs_tensor.ndim == 1:
             obs_tensor = obs_tensor.unsqueeze(0)
 
         # Move to GPU
         obs_tensor = obs_tensor.to(self.device, non_blocking=True)
 
-        # Prepare output tensor [1, 3] for action logits
-        output_tensor = torch.empty((1, 3), dtype=torch.float32, device=self.device)
+        # Prepare output tensor [1, 45] for action logits (15 vehicles * 3 actions)
+        output_tensor = torch.empty(
+            (1, self.action_dim), dtype=torch.float32, device=self.device
+        )
 
         # Bindings: device pointers
         bindings = [
@@ -96,16 +111,18 @@ class RLInference(Model):
         # Execute inference
         self.context.execute_v2(bindings)
 
-        # Return action with highest probability
-        return int(output_tensor.argmax(dim=1).item())
+        # Reshape logits to [15, 3] and get argmax per vehicle
+        logits = output_tensor.view(self.max_vehicles, 3)
+        actions = logits.argmax(dim=1).cpu().numpy()
 
-    @staticmethod
-    def _check_inputs(observation: np.ndarray | torch.Tensor) -> bool:
+        return actions
+
+    def _check_inputs(self, observation: np.ndarray | torch.Tensor) -> bool:
         """
         Check the input observation for validity.
 
         Args:
-            observation: Observation vector, expected shape [15] or [1, 15].
+            observation: Observation vector, expected shape [81] or [1, 81] for multi-vehicle.
 
         Raises:
             ValueError: If the observation is not valid.
@@ -120,20 +137,22 @@ class RLInference(Model):
             logger.error("Observation must not be empty.")
             raise ValueError("Observation must not be empty.")
 
-        # Check shape: should be [15] or [1, 15]
+        # Check shape: should be [obs_dim] or [1, obs_dim]
         if obs_array.ndim == 1:
-            if obs_array.shape[0] != 15:
-                logger.error(f"Expected observation shape [15], got {obs_array.shape}")
+            if obs_array.shape[0] != self.obs_dim:
+                logger.error(
+                    f"Expected observation shape [{self.obs_dim}], got {obs_array.shape}"
+                )
                 raise ValueError(
-                    f"Expected observation shape [15], got {obs_array.shape}"
+                    f"Expected observation shape [{self.obs_dim}], got {obs_array.shape}"
                 )
         elif obs_array.ndim == 2:
-            if obs_array.shape != (1, 15):
+            if obs_array.shape != (1, self.obs_dim):
                 logger.error(
-                    f"Expected observation shape [1, 15], got {obs_array.shape}"
+                    f"Expected observation shape [1, {self.obs_dim}], got {obs_array.shape}"
                 )
                 raise ValueError(
-                    f"Expected observation shape [1, 15], got {obs_array.shape}"
+                    f"Expected observation shape [1, {self.obs_dim}], got {obs_array.shape}"
                 )
         else:
             logger.error(f"Observation should be 1D or 2D, got {obs_array.ndim}D")

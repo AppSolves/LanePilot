@@ -15,4 +15,12 @@
 **/runtime/
 **/video_codec_sdk/
 yolo*.pt
+
+# Assets
 assets/data/*.mp4
+assets/trained_models/**/*
+!assets/trained_models/*/
+!assets/trained_models/**/*.pt
+!assets/trained_models/**/*.engine
+!assets/trained_models/**/*.onnx
+!assets/trained_models/**/.gitkeep

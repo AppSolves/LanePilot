@@ -50,7 +50,15 @@ def export_model_to_onnx(
         output_names (list[str], optional): The names of the output tensors.
         dynamic_axes (dict[str, dict[int, str]], optional): Dynamic axes for the model.
     """
-    model = model.eval().to(DEVICE)
+    # Ensure model and inputs are on the same device (CPU for compatibility)
+    model = model.eval().cpu()
+    dummy_input = tuple(
+        t.cpu() if isinstance(t, torch.Tensor) else t for t in dummy_input
+    )
+
+    # Ensure save_path has .onnx extension
+    if save_path.suffix != ".onnx":
+        save_path = save_path.with_suffix(".onnx")
 
     # Export the model to ONNX format
     logger.info("Exporting the model to ONNX format...")
