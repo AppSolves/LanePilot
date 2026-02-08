@@ -1,7 +1,7 @@
 project_name: "LanePilot"
 
 global_config_file: "$ROOT_DIR/project_config.yaml"
-global_cache_dir: "$ROOT_DIR/.cache"
+global_cache_dir: "$ROOT_DIR/runtime/.cache"
 global_assets_dir: "$ROOT_DIR/assets"
 
 environment_variables:
