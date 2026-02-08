@@ -89,95 +89,84 @@ class CurriculumCallback(BaseCallback):
 
 
 if __name__ == "__main__":
-    import argparse
+    from ai.lane_allocation.config_utils import create_training_parser, load_config
 
-    parser = argparse.ArgumentParser(description="Train RL Lane Allocation Agent")
-    parser.add_argument(
-        "--timesteps", type=int, default=500_000, help="Total training timesteps"
-    )
-    parser.add_argument(
-        "--attention", action="store_true", default=True, help="Use attention policy"
-    )
-    parser.add_argument(
-        "--mlp", action="store_true", help="Use MLP policy instead of attention"
-    )
-    parser.add_argument(
-        "--device",
-        type=str,
-        default="cpu",
-        choices=["cpu", "cuda"],
-        help="Training device",
-    )
-    parser.add_argument(
-        "--n-envs", type=int, default=4, help="Number of parallel environments"
-    )
-    parser.add_argument("--logdir", type=str, default="./logs", help="Log directory")
-    parser.add_argument(
-        "--spawn-rate", type=float, default=0.3, help="Initial spawn rate"
-    )
+    # Parse arguments
+    parser = create_training_parser()
     args = parser.parse_args()
 
-    # Override attention if MLP specified
-    use_attention = args.attention and not args.mlp
+    # Load configuration
+    config = load_config(args.config)
+    config.apply_cli_overrides(args)
+
+    # Get configuration sections
+    env_config = config.get_environment_config()
+    train_config = config.get_training_config()
+    policy_config = config.get_policy_config()
+    curriculum_config = config.get("curriculum", {})
+    callbacks_config = config.get("callbacks", {})
+
+    # Determine policy type
+    use_attention = policy_config.get("type", "attention") == "attention"
 
     # Create timestamped log directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    logdir = os.path.join(args.logdir, f"ppo_lane_allocation_{timestamp}")
+    logdir = os.path.join(
+        train_config.get("log_dir", "./logs"),
+        f"ppo_lane_allocation_{timestamp}",
+    )
     os.makedirs(logdir, exist_ok=True)
 
     print("=" * 60)
     print("Training RL Lane Allocation Agent")
     print("=" * 60)
-    print(f"Device: {args.device}")
-    print(f"Timesteps: {args.timesteps:,}")
+    print(f"Device: {train_config.get('device', 'cpu')}")
+    print(f"Timesteps: {train_config.get('timesteps', 500000):,}")
     print(f"Policy: {'Attention' if use_attention else 'MLP'}")
-    print(f"Parallel Envs: {args.n_envs}")
-
-    # Environment configuration
-    config = {
-        "num_lanes": 3,
-        "road_length": 1000.0,
-        "dt": 0.2,
-        "spawn_rate": args.spawn_rate,  # Start with lower traffic, curriculum will increase
-        "max_episode_steps": 300,
-        "max_speed": 33.33,  # ~120 km/h
-        "min_speed": 8.33,  # ~30 km/h
-    }
+    print(f"Parallel Envs: {train_config.get('n_envs', 4)}")
+    print(f"Config file: {config.config_path}")
 
     # Create environments
     def make_env():
-        env = load_rl_env(config)
+        env = load_rl_env(env_config)
         env = Monitor(env)
         return env
 
     # Training environment
-    vec_env = DummyVecEnv([make_env for _ in range(args.n_envs)])  # Parallel envs
+    n_envs = train_config.get("n_envs", 4)
+    vec_env = DummyVecEnv([make_env for _ in range(n_envs)])  # Parallel envs
 
     # Evaluation environment
     eval_env = DummyVecEnv([make_env])
 
     print(
-        f"\nEnvironment: {config['num_lanes']} lanes, {config['road_length']}m length"
+        f"\nEnvironment: {env_config.get('num_lanes', 3)} lanes, {env_config.get('road_length', 1000)}m length"
     )
     print(f"Observation space: {vec_env.observation_space}")
     print(f"Action space: {vec_env.action_space}")
+
+    # Policy configuration
+    features_dim = policy_config.get("features_dim", 128)
+    net_arch = policy_config.get("net_arch", {"pi": [128, 64], "vf": [128, 64]})
+
+    if use_attention:
+        attention_config = policy_config.get("attention", {})
+        features_extractor_kwargs = {
+            "features_dim": features_dim,
+            "num_attention_heads": attention_config.get("num_heads", 4),
+            "hidden_dim": attention_config.get("hidden_dim", 128),
+        }
+    else:
+        features_extractor_kwargs = {"features_dim": features_dim}
 
     policy_kwargs = {
         "features_extractor_class": (
             AttentionPolicyNetwork if use_attention else SimpleMLPExtractor
         ),
-        "features_extractor_kwargs": (
-            {
-                "features_dim": 128,
-                "num_attention_heads": 4,
-                "hidden_dim": 128,
-            }
-            if use_attention
-            else {"features_dim": 128}
+        "features_extractor_kwargs": features_extractor_kwargs,
+        "net_arch": dict(
+            pi=net_arch.get("pi", [128, 64]), vf=net_arch.get("vf", [128, 64])
         ),
-        "net_arch": [
-            dict(pi=[128, 64], vf=[128, 64])
-        ],  # Separate networks for policy and value
     }
 
     print(f"\nUsing {'Attention-based' if use_attention else 'MLP'} policy network")
@@ -187,52 +176,66 @@ if __name__ == "__main__":
         "MlpPolicy",
         vec_env,
         policy_kwargs=policy_kwargs,
-        verbose=1,
-        learning_rate=3e-4,
-        n_steps=2048,
-        batch_size=64,
-        n_epochs=10,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        ent_coef=0.01,  # Entropy bonus for exploration
-        vf_coef=0.5,
-        max_grad_norm=0.5,
-        tensorboard_log=logdir,
-        device=args.device,
+        verbose=train_config.get("verbose", 1),
+        learning_rate=train_config.get("learning_rate", 3e-4),
+        n_steps=train_config.get("n_steps", 2048),
+        batch_size=train_config.get("batch_size", 64),
+        n_epochs=train_config.get("n_epochs", 10),
+        gamma=train_config.get("gamma", 0.99),
+        gae_lambda=train_config.get("gae_lambda", 0.95),
+        clip_range=train_config.get("clip_range", 0.2),
+        ent_coef=train_config.get("ent_coef", 0.01),
+        vf_coef=train_config.get("vf_coef", 0.5),
+        max_grad_norm=train_config.get("max_grad_norm", 0.5),
+        tensorboard_log=logdir if train_config.get("tensorboard_log", True) else None,
+        device=train_config.get("device", "cpu"),
+        seed=train_config.get("seed"),
     )
 
     # Setup callbacks
-    checkpoint_callback = CheckpointCallback(
-        save_freq=20000,
-        save_path=logdir,
-        name_prefix="ppo_lane",
-        save_vecnormalize=True,
-    )
+    callbacks = []
 
-    eval_callback = EvalCallback(
-        eval_env,
-        best_model_save_path=logdir,
-        log_path=logdir,
-        eval_freq=10000,
-        deterministic=True,
-        render=False,
-    )
+    # Checkpoint callback
+    if callbacks_config.get("checkpoint", {}).get("enabled", True):
+        checkpoint_callback = CheckpointCallback(
+            save_freq=callbacks_config.get("checkpoint", {}).get("save_freq", 20000),
+            save_path=logdir,
+            name_prefix="ppo_lane",
+            save_vecnormalize=True,
+        )
+        callbacks.append(checkpoint_callback)
 
-    metrics_callback = MetricsCallback(verbose=1)
-    curriculum_callback = CurriculumCallback(
-        initial_spawn_rate=0.3,
-        final_spawn_rate=0.8,
-        steps_to_final=200_000,
-        verbose=1,
-    )
+    # Evaluation callback
+    if callbacks_config.get("evaluation", {}).get("enabled", True):
+        eval_callback = EvalCallback(
+            eval_env,
+            best_model_save_path=logdir,
+            log_path=logdir,
+            eval_freq=callbacks_config.get("evaluation", {}).get("eval_freq", 10000),
+            n_eval_episodes=callbacks_config.get("evaluation", {}).get(
+                "n_eval_episodes", 5
+            ),
+            deterministic=True,
+            render=False,
+        )
+        callbacks.append(eval_callback)
 
-    callbacks = [
-        checkpoint_callback,
-        eval_callback,
-        metrics_callback,
-        curriculum_callback,
-    ]
+    # Metrics callback
+    if callbacks_config.get("metrics", {}).get("enabled", True):
+        metrics_callback = MetricsCallback(
+            verbose=callbacks_config.get("metrics", {}).get("print_freq", 10)
+        )
+        callbacks.append(metrics_callback)
+
+    # Curriculum callback
+    if curriculum_config.get("enabled", True):
+        curriculum_callback = CurriculumCallback(
+            initial_spawn_rate=curriculum_config.get("initial_spawn_rate", 0.3),
+            final_spawn_rate=curriculum_config.get("final_spawn_rate", 0.8),
+            steps_to_final=curriculum_config.get("steps_to_final", 200000),
+            verbose=1,
+        )
+        callbacks.append(curriculum_callback)
 
     print("\n" + "=" * 60)
     print("Starting Training...")
@@ -241,7 +244,7 @@ if __name__ == "__main__":
     # Train the model
     try:
         model.learn(
-            total_timesteps=args.timesteps,
+            total_timesteps=train_config.get("timesteps", 500000),
             callback=callbacks,
             progress_bar=True,
         )

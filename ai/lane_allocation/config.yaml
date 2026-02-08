@@ -1,0 +1,203 @@
+# Lane Allocation RL Configuration
+# All parameters for training, evaluation, and visualization
+
+# Environment Configuration
+environment:
+  num_lanes: 3 # Number of highway lanes
+  road_length: 1000.0 # Road length in meters
+  dt: 0.2 # Simulation timestep in seconds
+  spawn_rate: 0.5 # Initial vehicle spawn rate (vehicles/second)
+  max_episode_steps: 300 # Maximum steps per episode
+  max_speed: 33.33 # Maximum speed in m/s (~120 km/h)
+  min_speed: 8.33 # Minimum speed in m/s (~30 km/h)
+
+  # Multi-Vehicle Control (Centralized Traffic Management)
+  multi_vehicle_control: true # Control ALL vehicles (true) vs single ego vehicle (false)
+  max_vehicles: 15 # Maximum number of vehicles to control simultaneously
+  initial_vehicle_count: 6 # Number of vehicles to spawn at reset
+
+# Training Configuration
+training:
+  algorithm: "PPO" # RL algorithm (PPO)
+  timesteps: 5000000 # Total training timesteps (5M for multi-vehicle, 500k for single-vehicle)
+  device: "cpu" # Training device: "cpu" (optimal for MLP) or "cuda" (for CNN policies)
+  n_envs: 8 # Number of parallel environments (more for multi-vehicle)
+  seed: null # Random seed (null = random)
+
+  # PPO Hyperparameters
+  learning_rate: 0.0003 # Learning rate (3e-4)
+  n_steps: 2048 # Steps per environment before update
+  batch_size: 128 # Minibatch size (larger for multi-vehicle)
+  n_epochs: 10 # Number of epochs per update
+  gamma: 0.99 # Discount factor
+  gae_lambda: 0.95 # GAE lambda parameter
+  clip_range: 0.2 # PPO clipping parameter
+  ent_coef: 0.02 # Entropy coefficient (higher for multi-vehicle exploration)
+  vf_coef: 0.5 # Value function coefficient
+  max_grad_norm: 0.5 # Gradient clipping
+
+  # Logging
+  tensorboard_log: true # Enable TensorBoard logging
+  log_dir: "./logs" # Log directory
+  verbose: 1 # Verbosity level (0, 1, 2)
+
+# Policy Network Configuration
+policy:
+  type: "attention" # "attention" or "mlp"
+  features_dim: 128 # Output feature dimension
+
+  # Attention-specific parameters
+  attention:
+    num_heads: 4 # Number of attention heads
+    hidden_dim: 128 # Hidden layer dimension
+
+  # MLP-specific parameters
+  mlp:
+    layers: [128, 128] # Hidden layer sizes
+
+  # Policy/Value network architecture
+  net_arch:
+    pi: [128, 64] # Policy network layers
+    vf: [128, 64] # Value network layers
+
+# Curriculum Learning
+curriculum:
+  enabled: true # Enable curriculum learning
+  initial_spawn_rate: 0.3 # Starting spawn rate (easy)
+  final_spawn_rate: 0.8 # Final spawn rate (hard)
+  steps_to_final: 200000 # Steps to reach final difficulty
+
+# Callbacks
+callbacks:
+  checkpoint:
+    enabled: true # Save checkpoints during training
+    save_freq: 20000 # Save every N steps
+
+  evaluation:
+    enabled: true # Periodic evaluation
+    eval_freq: 10000 # Evaluate every N steps
+    n_eval_episodes: 5 # Number of evaluation episodes
+
+  metrics:
+    enabled: true # Track custom metrics
+    print_freq: 10 # Print metrics every N episodes
+
+# Evaluation Configuration
+evaluation:
+  model_path: "./logs/ppo_lane_final" # Path to trained model
+  num_episodes: 10 # Number of episodes to evaluate
+  render: false # Render during evaluation
+  deterministic: true # Use deterministic policy
+
+  # Performance thresholds
+  thresholds:
+    excellent_speed: 28.0 # m/s (>100 km/h)
+    good_speed: 22.0 # m/s (>80 km/h)
+    smooth_std: 3.0 # Low stop-and-go
+    moderate_std: 6.0 # Moderate stop-and-go
+    efficient_lane_changes: 5 # Max lane changes for efficiency
+    moderate_lane_changes: 10 # Moderate lane changes
+
+# Visualization Configuration
+visualization:
+  # Window settings
+  window_width: 1400 # Window width in pixels
+  window_height: 900 # Window height in pixels
+  fps: 30 # Target frames per second
+  scale: 1.0 # Rendering scale factor
+
+  # Layout
+  highway_height_ratio: 0.75 # Highway takes 75% of window height
+  metrics_panel_width: 300 # Metrics panel width in pixels
+
+  # Colors (BGR format for OpenCV)
+  colors:
+    background: [30, 30, 30] # Dark gray background
+    road: [50, 50, 50] # Road color
+    lane_line: [200, 200, 200] # Lane divider color
+    lane_edge: [255, 255, 255] # Road edge color
+
+    ego_vehicle: [0, 255, 0] # Green for RL-controlled vehicle
+    other_vehicle: [100, 150, 255] # Orange for other vehicles
+    fast_vehicle: [0, 255, 0] # Green for fast vehicles
+    slow_vehicle: [0, 0, 255] # Red for slow vehicles
+
+    text: [255, 255, 255] # White text
+    text_bg: [0, 0, 0] # Black text background
+    panel_bg: [40, 40, 40] # Panel background
+    success: [0, 255, 0] # Green for good metrics
+    warning: [0, 165, 255] # Orange for warnings
+    danger: [0, 0, 255] # Red for danger
+
+  # Vehicle rendering
+  vehicle:
+    width: 25 # Vehicle width in pixels
+    length: 50 # Vehicle length in pixels
+    corner_radius: 5 # Rounded corner radius
+    border_width: 2 # Border thickness
+
+  # Speed visualization
+  speed:
+    show_indicators: true # Show speed as text
+    show_gradient: true # Color vehicles by speed
+    font_scale: 0.4 # Font size for speed text
+
+  # Action indicators
+  action:
+    show_arrows: true # Show lane change arrows
+    arrow_size: 20 # Arrow size in pixels
+    arrow_offset: 30 # Arrow offset from vehicle
+
+  # Metrics panel
+  metrics:
+    show_panel: true # Show metrics panel
+    show_graphs: true # Show real-time graphs
+    graph_history: 100 # Graph history length
+    font_scale: 0.5 # Font size
+    line_spacing: 25 # Line spacing in pixels
+
+  # Observation overlay
+  observation:
+    show_overlay: false # Show observation values
+    opacity: 0.7 # Overlay opacity
+
+  # Controls
+  controls:
+    pause_key: 32 # Space bar
+    reset_key: ord('r') # R key
+    quit_key: ord('q') # Q key
+    faster_key: ord('+') # + key
+    slower_key: ord('-') # - key
+    toggle_obs_key: ord('o') # O key (toggle observations)
+
+  # Recording
+  recording:
+    enabled: false # Enable video recording
+    output_path: "./videos" # Output directory
+    codec: "mp4v" # Video codec
+    fps: 30 # Recording FPS
+
+# Reward Function Weights (for reference/tuning)
+reward:
+  speed_weight: 2.0 # Main speed reward
+  global_flow_weight: 0.5 # Overall traffic flow
+  lane_efficiency_weight: 0.2 # Lane speed preference
+  unsafe_gap_severe: -5.0 # Collision risk penalty
+  unsafe_gap_moderate: -1.0 # Safe distance penalty
+  hard_braking: -0.5 # Stop-and-go penalty
+  speed_variance_weight: -0.01 # Traffic variance penalty
+  collision_penalty: -10.0 # Collision penalty
+
+# Vehicle Physics (IDM parameters)
+vehicle:
+  length: 4.5 # Vehicle length in meters
+  min_spacing: 2.0 # Minimum gap to front vehicle (m)
+  time_headway: 1.5 # Desired time headway (s)
+  max_acceleration: 2.0 # Maximum acceleration (m/s²)
+  comfortable_deceleration: 3.0 # Comfortable braking (m/s²)
+
+  # Safety thresholds
+  safety:
+    min_lane_change_front_gap: 15.0 # Minimum front gap for lane change (m)
+    min_lane_change_rear_gap: 10.0 # Minimum rear gap for lane change (m)
+    speed_diff_threshold: 5.0 # Speed difference threshold (m/s)

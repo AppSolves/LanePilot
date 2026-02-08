@@ -30,8 +30,23 @@ class HighwayEnv(gym.Env):
         )  # vehicles per second (tune from video)
         self.max_speed = config.get("max_speed", 33.33)  # 120 km/h in m/s ~ 33.33
         self.min_speed = config.get("min_speed", 8.33)  # 30 km/h
-        self.ego_index = None
-        self.multi_agent = config.get("multi_agent", False)  # control multiple vehicles
+
+        # Multi-vehicle centralized control
+        self.multi_vehicle_control = config.get("multi_vehicle_control", False)
+        self.max_vehicles = config.get("max_vehicles", 15)
+        self.initial_vehicle_count = config.get("initial_vehicle_count", 6)
+        self.ego_index = None  # Only used in single-vehicle mode
+
+        # Rendering
+        self.render_mode = config.get("render_mode", None)
+        self.renderer = None
+        self.render_config = config.get("visualization", {})
+        # Track actions: single value for single-vehicle, array for multi-vehicle
+        self.last_action = (
+            0
+            if not self.multi_vehicle_control
+            else np.zeros(self.max_vehicles, dtype=np.int32)
+        )
 
         # Validate configuration
         if self.max_speed <= self.min_speed:
@@ -43,16 +58,32 @@ class HighwayEnv(gym.Env):
         if self.spawn_rate < 0:
             raise ValueError(f"spawn_rate must be >= 0, got {self.spawn_rate}")
 
-        # action space: 0=keep_lane, 1=change_left, 2=change_right
-        self.action_space = spaces.Discrete(3)
+        # Action space:
+        # - Single-vehicle mode: Discrete(3) - control one ego vehicle
+        # - Multi-vehicle mode: MultiDiscrete([3]*max_vehicles) - control all vehicles
+        if self.multi_vehicle_control:
+            self.action_space = spaces.MultiDiscrete([3] * self.max_vehicles)
+        else:
+            self.action_space = spaces.Discrete(3)
 
-        # observation space: normalized features for ego + nearby vehicles
-        # [own_lane, own_speed, own_acc, gap_front, rel_speed_front, gap_left_front, gap_left_back,
-        #  gap_right_front, gap_right_back, lane_densities (3), avg_speed_per_lane (3)]
-        obs_len = 15
-        self.observation_space = spaces.Box(
-            low=0.0, high=1.0, shape=(obs_len,), dtype=np.float32
-        )
+        # Observation space:
+        # - Single-vehicle mode: local view (15 features)
+        # - Multi-vehicle mode: global state (max_vehicles * 5 features + 6 global features)
+        if self.multi_vehicle_control:
+            # Per-vehicle: [lane, position, speed, acceleration, target_speed] = 5 features
+            # Global: [lane_density_0, lane_density_1, lane_density_2, avg_speed_0, avg_speed_1, avg_speed_2] = 6 features
+            obs_len = self.max_vehicles * 5 + 6
+            self.observation_space = spaces.Box(
+                low=0.0, high=1.0, shape=(obs_len,), dtype=np.float32
+            )
+        else:
+            # Single-vehicle: [own_lane, own_speed, own_acc, gap_front, rel_speed_front,
+            #                  gap_left_front, gap_left_back, gap_right_front, gap_right_back,
+            #                  lane_densities (3), avg_speed_per_lane (3)]
+            obs_len = 15
+            self.observation_space = spaces.Box(
+                low=0.0, high=1.0, shape=(obs_len,), dtype=np.float32
+            )
 
         # internal state
         self.vehicles: list[Vehicle] = []
@@ -85,68 +116,127 @@ class HighwayEnv(gym.Env):
         self.hard_braking_count = 0
         self.collision_count = 0
 
-        # Spawn initial traffic with varied speeds
-        initial_count = int(self.spawn_rate * 20)
-        for i in range(initial_count):
-            lane = rd.randrange(self.num_lanes)
-            pos = rd.uniform(0, self.road_length * 0.6)
-            # Realistic speed distribution: mostly around speed limit
-            speed = np.clip(
-                np.random.normal(self.max_speed * 0.85, 5.0),
-                self.min_speed,
-                self.max_speed,
-            )
-            v = Vehicle(
-                lane=lane,
-                position=pos,
-                speed=speed,
+        if self.multi_vehicle_control:
+            # Multi-vehicle mode: spawn initial_vehicle_count vehicles, ALL controlled by RL
+            for i in range(self.initial_vehicle_count):
+                lane = rd.randrange(self.num_lanes)
+                pos = rd.uniform(0, self.road_length * 0.6)
+                # Varied speed distribution to create different vehicle classes
+                speed = rd.uniform(self.min_speed, self.max_speed)
+                # Desired speed determines if vehicle should be in fast/slow lane
+                desired_speed = rd.uniform(self.min_speed, self.max_speed)
+                v = Vehicle(
+                    lane=lane,
+                    position=pos,
+                    speed=speed,
+                    max_speed=self.max_speed,
+                    desired_speed=desired_speed,
+                    is_controlled=True,  # ALL vehicles are RL-controlled
+                )
+                self.vehicles.append(v)
+            # Sort by position to avoid immediate collisions
+            self.vehicles.sort(key=lambda x: x.position)
+        else:
+            # Single-vehicle mode: spawn background traffic + one ego vehicle
+            initial_count = int(self.spawn_rate * 20)
+            for i in range(initial_count):
+                lane = rd.randrange(self.num_lanes)
+                pos = rd.uniform(0, self.road_length * 0.6)
+                # Realistic speed distribution: mostly around speed limit
+                speed = np.clip(
+                    np.random.normal(self.max_speed * 0.85, 5.0),
+                    self.min_speed,
+                    self.max_speed,
+                )
+                v = Vehicle(
+                    lane=lane,
+                    position=pos,
+                    speed=speed,
+                    max_speed=self.max_speed,
+                    desired_speed=speed,
+                    is_controlled=False,
+                )
+                self.vehicles.append(v)
+
+            # Sort by position to avoid immediate collisions
+            self.vehicles.sort(key=lambda x: x.position)
+
+            # Create ego vehicle (RL-controlled)
+            ego_speed = rd.uniform(self.min_speed, self.max_speed)
+            ego = Vehicle(
+                lane=1,
+                position=10.0,
+                speed=ego_speed,
                 max_speed=self.max_speed,
-                desired_speed=speed,
-                is_controlled=False,
+                desired_speed=self.max_speed * 0.9,  # wants to go fast
+                is_controlled=True,
             )
-            self.vehicles.append(v)
-
-        # Sort by position to avoid immediate collisions
-        self.vehicles.sort(key=lambda x: x.position)
-
-        # Create ego vehicle (RL-controlled)
-        ego_speed = rd.uniform(self.min_speed, self.max_speed)
-        ego = Vehicle(
-            lane=1,
-            position=10.0,
-            speed=ego_speed,
-            max_speed=self.max_speed,
-            desired_speed=self.max_speed * 0.9,  # wants to go fast
-            is_controlled=True,
-        )
-        self.vehicles.insert(0, ego)
-        self.ego_index = 0
+            self.vehicles.insert(0, ego)
+            self.ego_index = 0
 
         return self._get_obs(), {}
 
     def step(self, action):
-        if self.ego_index is None:
-            raise RuntimeError("Environment must be reset before stepping.")
-
         self.step_count += 1
-        ego = self.vehicles[self.ego_index]
-        old_lane = ego.lane
 
-        # Apply ego action (lane change only)
-        self._apply_action(ego, action)
+        if self.multi_vehicle_control:
+            # Multi-vehicle mode: apply actions to ALL vehicles
+            old_lanes = [v.lane for v in self.vehicles]
+            actions_executed = []
 
-        if ego.lane != old_lane:
-            self.lane_change_count += 1
+            # Apply actions to existing vehicles (action is array of size max_vehicles)
+            for i in range(min(len(self.vehicles), self.max_vehicles)):
+                if i < len(action):
+                    executed = self._apply_action(self.vehicles[i], action[i])
+                    actions_executed.append(action[i] if executed else 0)
+                    if self.vehicles[i].lane != old_lanes[i]:
+                        self.lane_change_count += 1
 
-        # Update all vehicles using IDM for longitudinal control
-        self._update_vehicles_idm()
+            # Store actions for visualization
+            self.last_action = np.array(
+                actions_executed + [0] * (self.max_vehicles - len(actions_executed)),
+                dtype=np.int32,
+            )
 
-        # Update positions based on velocities
-        self._update_positions()
+            # Update all vehicles using IDM for longitudinal control
+            self._update_vehicles_idm()
 
-        # Spawn new vehicles probabilistically
-        if rd.random() < self.spawn_rate * self.dt:
-            self._spawn_vehicle()
+            # Update positions
+            self._update_positions()
+
+            # In multi-vehicle mode, spawn new vehicles up to max_vehicles
+            if (
+                len(self.vehicles) < self.max_vehicles
+                and rd.random() < self.spawn_rate * self.dt
+            ):
+                self._spawn_vehicle_controlled()
+
+        else:
+            # Single-vehicle mode: apply action only to ego vehicle
+            if self.ego_index is None:
+                raise RuntimeError("Environment must be reset before stepping.")
+
+            ego = self.vehicles[self.ego_index]
+            old_lane = ego.lane
+
+            # Apply ego action (lane change only) and track if it was actually executed
+            action_executed = self._apply_action(ego, action)
+
+            # Store action for visualization (0 if not executed)
+            self.last_action = action if action_executed else 0
+
+            if ego.lane != old_lane:
+                self.lane_change_count += 1
+
+            # Update all vehicles using IDM for longitudinal control
+            self._update_vehicles_idm()
+
+            # Update positions based on velocities
+            self._update_positions()
+
+            # Spawn new vehicles probabilistically
+            if rd.random() < self.spawn_rate * self.dt:
+                self._spawn_vehicle()
 
         # Track metrics
         avg_speed = sum(v.speed for v in self.vehicles) / max(1, len(self.vehicles))
@@ -165,21 +255,31 @@ class HighwayEnv(gym.Env):
             "lane_changes": self.lane_change_count,
             "hard_braking": self.hard_braking_count,
             "collisions": self.collision_count,
+            "reward": reward,
+            "step": self.step_count,
+            "max_steps": self.max_episode_steps,
         }
 
         return obs, reward, done, truncated, info
 
     def _apply_action(self, ego, action):
-        """Apply lane change action. Actions: 0=keep, 1=left, 2=right"""
+        """Apply lane change action. Actions: 0=keep, 1=left, 2=right
+
+        Returns:
+            bool: True if action was executed, False if blocked
+        """
         if action == 1 and ego.lane > 0:
             # Check safety for left lane change
             if self._is_lane_change_safe(ego, ego.lane - 1):
                 ego.lane -= 1
+                return True
         elif action == 2 and ego.lane < self.num_lanes - 1:
             # Check safety for right lane change
             if self._is_lane_change_safe(ego, ego.lane + 1):
                 ego.lane += 1
+                return True
         # action 0: keep lane - do nothing
+        return action == 0  # Return True for keep lane, False for blocked lane change
 
     def _is_lane_change_safe(self, ego, target_lane):
         """
@@ -265,8 +365,15 @@ class HighwayEnv(gym.Env):
             for v2 in self.vehicles[i + 1 :]:
                 if v1.lane == v2.lane:
                     distance = abs(v1.position - v2.position)
-                    if distance < v1.length:
+                    # Collision if distance less than vehicle length
+                    if distance < v1.length * 1.5:  # Add safety margin
                         self.collision_count += 1
+                        # Emergency separation to prevent complete overlap
+                        if distance < v1.length * 0.5:
+                            if v1.position > v2.position:
+                                v1.position = v2.position + v1.length * 1.5
+                            else:
+                                v2.position = v1.position + v2.length * 1.5
 
         # Remove vehicles beyond road
         self.vehicles = [
@@ -302,6 +409,32 @@ class HighwayEnv(gym.Env):
                 )
             )
 
+    def _spawn_vehicle_controlled(self):
+        """Spawn a new RL-controlled vehicle for multi-vehicle mode."""
+        lane = rd.randrange(self.num_lanes)
+        pos = 0.0
+        speed = rd.uniform(self.min_speed, self.max_speed)
+        desired_speed = rd.uniform(self.min_speed, self.max_speed)
+
+        # Only spawn if there's enough space
+        can_spawn = True
+        for v in self.vehicles:
+            if v.lane == lane and v.position < 20.0:
+                can_spawn = False
+                break
+
+        if can_spawn:
+            self.vehicles.append(
+                Vehicle(
+                    lane=lane,
+                    position=pos,
+                    speed=speed,
+                    max_speed=self.max_speed,
+                    desired_speed=desired_speed,
+                    is_controlled=True,  # RL-controlled in multi-vehicle mode
+                )
+            )
+
     def _vehicle_in_front(self, subject):
         """Get the nearest vehicle ahead in the same lane."""
         candidates = [
@@ -315,83 +448,133 @@ class HighwayEnv(gym.Env):
 
     def _get_obs(self):
         """
-        Build normalized observation for ego vehicle.
-        Features: lane position, speed, acceleration, gaps, relative speeds, lane densities.
+        Build normalized observation based on control mode.
+
+        Single-vehicle mode: Local view around ego vehicle (15 features)
+        Multi-vehicle mode: Global state of all vehicles (max_vehicles * 5 + 6 features)
         """
-        if self.ego_index is None:
-            raise RuntimeError("Environment must be reset before getting observations.")
+        if self.multi_vehicle_control:
+            # Multi-vehicle mode: global state observation
+            obs = []
 
-        ego = self.vehicles[self.ego_index]
+            # Per-vehicle features (padded to max_vehicles)
+            for i in range(self.max_vehicles):
+                if i < len(self.vehicles):
+                    v = self.vehicles[i]
+                    # Normalized features: [lane, position, speed, acceleration, desired_speed]
+                    lane_norm = v.lane / max(1, self.num_lanes - 1)
+                    pos_norm = np.clip(v.position / self.road_length, 0, 1)
+                    speed_norm = np.clip(
+                        (v.speed - self.min_speed) / (self.max_speed - self.min_speed),
+                        0,
+                        1,
+                    )
+                    acc_norm = np.clip(
+                        (v.acceleration + 5) / 10, 0, 1
+                    )  # [-5, 5] -> [0, 1]
+                    desired_speed_norm = np.clip(
+                        (v.desired_speed - self.min_speed)
+                        / (self.max_speed - self.min_speed),
+                        0,
+                        1,
+                    )
 
-        # Ego state
-        own_lane = ego.lane / max(1, self.num_lanes - 1)
-        own_speed = np.clip(
-            (ego.speed - self.min_speed) / (self.max_speed - self.min_speed), 0, 1
-        )
-        own_acc = np.clip(
-            (ego.acceleration + 5) / 10, 0, 1
-        )  # normalize from [-5, 5] to [0, 1]
+                    obs.extend(
+                        [lane_norm, pos_norm, speed_norm, acc_norm, desired_speed_norm]
+                    )
+                else:
+                    # Padding for non-existent vehicles
+                    obs.extend([0.0, 0.0, 0.0, 0.0, 0.0])
 
-        # Front vehicle in current lane
-        gap_front, rel_speed_front = self._gap_and_rel_speed(
-            ego, ego.lane, direction="front"
-        )
-        gap_front = np.clip(gap_front / 100.0, 0, 1)
-        rel_speed_front = np.clip(
-            (rel_speed_front + 20) / 40, 0, 1
-        )  # normalize from [-20, 20] to [0, 1]
+            # Global features (lane densities and average speeds)
+            for lane_id in range(self.num_lanes):
+                density = self._lane_density(lane_id) / 50.0
+                obs.append(np.clip(density, 0, 1))
 
-        # Left lane info
-        if ego.lane > 0:
-            gap_left_front, _ = self._gap_and_rel_speed(
-                ego, ego.lane - 1, direction="front"
-            )
-            gap_left_back, _ = self._gap_and_rel_speed(
-                ego, ego.lane - 1, direction="back"
-            )
-            gap_left_front = np.clip(gap_left_front / 100.0, 0, 1)
-            gap_left_back = np.clip(gap_left_back / 100.0, 0, 1)
+            for lane_id in range(self.num_lanes):
+                avg_speed = self._lane_avg_speed(lane_id)
+                obs.append(np.clip(avg_speed, 0, 1))
+
+            return np.array(obs, dtype=np.float32)
+
         else:
-            gap_left_front = gap_left_back = 0.0
+            # Single-vehicle mode: local ego-centric observation
+            if self.ego_index is None:
+                raise RuntimeError(
+                    "Environment must be reset before getting observations."
+                )
 
-        # Right lane info
-        if ego.lane < self.num_lanes - 1:
-            gap_right_front, _ = self._gap_and_rel_speed(
-                ego, ego.lane + 1, direction="front"
+            ego = self.vehicles[self.ego_index]
+
+            # Ego state
+            own_lane = ego.lane / max(1, self.num_lanes - 1)
+            own_speed = np.clip(
+                (ego.speed - self.min_speed) / (self.max_speed - self.min_speed), 0, 1
             )
-            gap_right_back, _ = self._gap_and_rel_speed(
-                ego, ego.lane + 1, direction="back"
+            own_acc = np.clip(
+                (ego.acceleration + 5) / 10, 0, 1
+            )  # normalize from [-5, 5] to [0, 1]
+
+            # Front vehicle in current lane
+            gap_front, rel_speed_front = self._gap_and_rel_speed(
+                ego, ego.lane, direction="front"
             )
-            gap_right_front = np.clip(gap_right_front / 100.0, 0, 1)
-            gap_right_back = np.clip(gap_right_back / 100.0, 0, 1)
-        else:
-            gap_right_front = gap_right_back = 0.0
+            gap_front = np.clip(gap_front / 100.0, 0, 1)
+            rel_speed_front = np.clip(
+                (rel_speed_front + 20) / 40, 0, 1
+            )  # normalize from [-20, 20] to [0, 1]
 
-        # Lane densities and average speeds
-        lane_densities = []
-        lane_avg_speeds = []
-        for lane_id in range(self.num_lanes):
-            density = self._lane_density(lane_id) / 50.0  # normalize
-            avg_speed = self._lane_avg_speed(lane_id)
-            lane_densities.append(np.clip(density, 0, 1))
-            lane_avg_speeds.append(np.clip(avg_speed, 0, 1))
+            # Left lane info
+            if ego.lane > 0:
+                gap_left_front, _ = self._gap_and_rel_speed(
+                    ego, ego.lane - 1, direction="front"
+                )
+                gap_left_back, _ = self._gap_and_rel_speed(
+                    ego, ego.lane - 1, direction="back"
+                )
+                gap_left_front = np.clip(gap_left_front / 100.0, 0, 1)
+                gap_left_back = np.clip(gap_left_back / 100.0, 0, 1)
+            else:
+                gap_left_front = gap_left_back = 0.0
 
-        obs = np.array(
-            [
-                own_lane,
-                own_speed,
-                own_acc,
-                gap_front,
-                rel_speed_front,
-                gap_left_front,
-                gap_left_back,
-                gap_right_front,
-                gap_right_back,
-                *lane_densities,
-                *lane_avg_speeds,
-            ],
-            dtype=np.float32,
-        )
+            # Right lane info
+            if ego.lane < self.num_lanes - 1:
+                gap_right_front, _ = self._gap_and_rel_speed(
+                    ego, ego.lane + 1, direction="front"
+                )
+                gap_right_back, _ = self._gap_and_rel_speed(
+                    ego, ego.lane + 1, direction="back"
+                )
+                gap_right_front = np.clip(gap_right_front / 100.0, 0, 1)
+                gap_right_back = np.clip(gap_right_back / 100.0, 0, 1)
+            else:
+                gap_right_front = gap_right_back = 0.0
+
+            # Lane densities and average speeds
+            lane_densities = []
+            lane_avg_speeds = []
+            for lane_id in range(self.num_lanes):
+                density = self._lane_density(lane_id) / 50.0  # normalize
+                avg_speed = self._lane_avg_speed(lane_id)
+                lane_densities.append(np.clip(density, 0, 1))
+                lane_avg_speeds.append(np.clip(avg_speed, 0, 1))
+
+            obs = np.array(
+                [
+                    own_lane,
+                    own_speed,
+                    own_acc,
+                    gap_front,
+                    rel_speed_front,
+                    gap_left_front,
+                    gap_left_back,
+                    gap_right_front,
+                    gap_right_back,
+                    *lane_densities,
+                    *lane_avg_speeds,
+                ],
+                dtype=np.float32,
+            )
 
         # Ensure correct size
         if len(obs) < 15:
@@ -442,55 +625,149 @@ class HighwayEnv(gym.Env):
     def _compute_reward(self):
         """
         Comprehensive reward function optimizing for:
-        1. High speed (efficiency)
-        2. Safe following distance (no tailgating)
-        3. Smooth traffic flow (no stop-and-go)
-        4. Efficient lane usage
-        5. Minimal unnecessary lane changes
-        """
-        if self.ego_index is None:
-            raise RuntimeError("Environment must be reset before computing reward.")
 
-        ego = self.vehicles[self.ego_index]
+        Multi-vehicle mode (Centralized Traffic Management):
+        1. Global average speed (throughput optimization)
+        2. Lane allocation quality (fast left, slow right)
+        3. Lane utilization balance (prevent clustering)
+        4. Smooth traffic flow (minimize speed variance)
+        5. Penalize unnecessary lane changes
+
+        Single-vehicle mode:
+        1. High speed (efficiency)
+        2. Safe following distance
+        3. Smooth traffic flow
+        4. Efficient lane usage
+        """
         reward = 0.0
 
-        # 1. Speed reward: encourage driving at desired speed
-        speed_ratio = ego.speed / ego.desired_speed
-        reward += 2.0 * speed_ratio  # main reward component
+        if self.multi_vehicle_control:
+            # Multi-vehicle mode: Global traffic optimization
+            if len(self.vehicles) == 0:
+                return 0.0
 
-        # 2. Safety: penalize unsafe following distances
-        front = self._vehicle_in_front(ego)
-        if front:
-            gap = front.position - ego.position - ego.length
-            if gap < 3.0:
-                reward -= 5.0  # severe penalty for collision risk
-            elif gap < 8.0:
-                reward -= 1.0  # moderate penalty
-            elif gap > 50.0:
-                # Slight penalty for being too far - could merge
-                reward -= 0.1
-
-        # 3. Smoothness: penalize hard braking (stop-and-go indicator)
-        if ego.acceleration < -ego.comfortable_deceleration * 0.5:
-            reward -= 0.5
-
-        # 4. Global flow: reward good overall traffic flow
-        if len(self.vehicles) > 1:
+            # 1. Global average speed (main reward - throughput)
             avg_speed = sum(v.speed for v in self.vehicles) / len(self.vehicles)
-            flow_ratio = avg_speed / self.max_speed
-            reward += 0.5 * flow_ratio
+            speed_ratio = avg_speed / self.max_speed
+            reward += 5.0 * speed_ratio  # Primary objective: high throughput
 
-            # Penalize speed variance (stop-and-go detection)
-            speed_variance = np.var([v.speed for v in self.vehicles])
-            reward -= 0.01 * speed_variance
+            # 2. Lane Allocation Quality: Fast cars left, slow cars right
+            # For each lane, check if vehicles are appropriately placed based on desired_speed
+            lane_allocation_score = 0.0
+            for v in self.vehicles:
+                # Expected lane based on desired speed
+                # Slow cars (desired_speed < 0.4*max) should be in lane 2 (right)
+                # Medium cars (0.4-0.7*max) should be in lane 1 (middle)
+                # Fast cars (>0.7*max) should be in lane 0 (left)
+                speed_ratio = v.desired_speed / self.max_speed
 
-        # 5. Lane efficiency: slight bonus for being in faster lanes when possible
-        current_lane_speed = self._lane_avg_speed(ego.lane)
-        reward += 0.2 * current_lane_speed
+                if speed_ratio < 0.4:  # Slow vehicle
+                    if v.lane == self.num_lanes - 1:  # Rightmost lane
+                        lane_allocation_score += 1.0
+                    elif v.lane == self.num_lanes - 2:  # Middle acceptable
+                        lane_allocation_score += 0.3
+                    else:  # Wrong lane
+                        lane_allocation_score -= 0.5
 
-        # 6. Collision penalty
-        if self.collision_count > 0:
-            reward -= 10.0
+                elif speed_ratio < 0.7:  # Medium speed vehicle
+                    if v.lane == 1:  # Middle lane (for 3-lane highway)
+                        lane_allocation_score += 1.0
+                    else:
+                        lane_allocation_score += 0.3
+
+                else:  # Fast vehicle
+                    if v.lane == 0:  # Leftmost lane
+                        lane_allocation_score += 1.0
+                    elif v.lane == 1:
+                        lane_allocation_score += 0.3
+                    else:
+                        lane_allocation_score -= 0.5
+
+            lane_allocation_score /= max(1, len(self.vehicles))
+            reward += 2.0 * lane_allocation_score
+
+            # 3. Lane utilization balance (prevent all cars in one lane)
+            lane_counts = [
+                sum(1 for v in self.vehicles if v.lane == i)
+                for i in range(self.num_lanes)
+            ]
+            if len(self.vehicles) > 0:
+                lane_distribution_variance = np.var(lane_counts) / len(self.vehicles)
+                reward -= 0.5 * lane_distribution_variance  # Penalize clustering
+
+            # 4. Smooth traffic flow: minimize speed variance
+            if len(self.vehicles) > 1:
+                speed_variance = np.var([v.speed for v in self.vehicles])
+                reward -= 0.02 * speed_variance  # Penalize stop-and-go
+
+            # 5. Safety: Penalize vehicles that are too close
+            for v in self.vehicles:
+                front = self._vehicle_in_front(v)
+                if front and front.lane == v.lane:
+                    gap = front.position - v.position - v.length
+                    if gap < 3.0:
+                        reward -= 2.0  # Collision risk
+                    elif gap < 8.0:
+                        reward -= 0.5  # Too close
+
+            # 6. Penalize excessive lane changes (efficiency)
+            # This is tracked over time via self.lane_change_count
+            # Small per-step penalty for any lane change
+            if self.step_count > 0 and self.lane_change_count > 0:
+                lane_change_rate = self.lane_change_count / self.step_count
+                if (
+                    lane_change_rate > 0.1
+                ):  # More than 10% of steps involve lane changes
+                    reward -= 0.5
+
+            # 7. Collision penalty
+            if self.collision_count > 0:
+                reward -= 10.0
+
+        else:
+            # Single-vehicle mode: ego-centric optimization
+            if self.ego_index is None:
+                raise RuntimeError("Environment must be reset before computing reward.")
+
+            ego = self.vehicles[self.ego_index]
+
+            # 1. Speed reward: encourage driving at desired speed
+            speed_ratio = ego.speed / ego.desired_speed
+            reward += 2.0 * speed_ratio  # main reward component
+
+            # 2. Safety: penalize unsafe following distances
+            front = self._vehicle_in_front(ego)
+            if front:
+                gap = front.position - ego.position - ego.length
+                if gap < 3.0:
+                    reward -= 5.0  # severe penalty for collision risk
+                elif gap < 8.0:
+                    reward -= 1.0  # moderate penalty
+                elif gap > 50.0:
+                    # Slight penalty for being too far - could merge
+                    reward -= 0.1
+
+            # 3. Smoothness: penalize hard braking (stop-and-go indicator)
+            if ego.acceleration < -ego.comfortable_deceleration * 0.5:
+                reward -= 0.5
+
+            # 4. Global flow: reward good overall traffic flow
+            if len(self.vehicles) > 1:
+                avg_speed = sum(v.speed for v in self.vehicles) / len(self.vehicles)
+                flow_ratio = avg_speed / self.max_speed
+                reward += 0.5 * flow_ratio
+
+                # Penalize speed variance (stop-and-go detection)
+                speed_variance = np.var([v.speed for v in self.vehicles])
+                reward -= 0.01 * speed_variance
+
+            # 5. Lane efficiency: slight bonus for being in faster lanes when possible
+            current_lane_speed = self._lane_avg_speed(ego.lane)
+            reward += 0.2 * current_lane_speed
+
+            # 6. Collision penalty
+            if self.collision_count > 0:
+                reward -= 10.0
 
         return reward
 
@@ -506,10 +783,53 @@ class HighwayEnv(gym.Env):
             "hard_braking_events": self.hard_braking_count,
             "collisions": self.collision_count,
             "total_reward": self.total_reward,
+            "num_vehicles": len(self.vehicles),
+            "step": self.step_count,
+            "max_steps": self.max_episode_steps,
         }
 
     def render(self):
-        """Simple text rendering."""
-        print(
-            f"Step {self.step_count}, Vehicles: {len(self.vehicles)}, Avg Speed: {np.mean(self.speed_history[-10:]) if self.speed_history else 0:.1f} m/s"
-        )
+        """Render the environment using OpenCV visualization."""
+        if self.render_mode == "human":
+            if self.renderer is None:
+                from .renderer import HighwayRenderer
+
+                self.renderer = HighwayRenderer(self.render_config)
+
+            # Get current observation for overlay
+            obs = (
+                self._get_obs()
+                if (self.ego_index is not None or self.multi_vehicle_control)
+                else None
+            )
+
+            # Get current stats
+            stats = self.get_metrics()
+
+            # Render frame
+            frame = self.renderer.render(
+                vehicles=self.vehicles,
+                ego_index=self.ego_index,
+                num_lanes=self.num_lanes,
+                road_length=self.road_length,
+                current_action=self.last_action,
+                observation=obs,
+                stats=stats,
+                multi_vehicle_control=self.multi_vehicle_control,
+            )
+
+            # Show and handle keyboard input
+            key = self.renderer.show()
+            return frame
+        else:
+            # Text rendering fallback
+            print(
+                f"Step {self.step_count}, Vehicles: {len(self.vehicles)}, Avg Speed: {np.mean(self.speed_history[-10:]) if self.speed_history else 0:.1f} m/s"
+            )
+            return None
+
+    def close(self):
+        """Close the environment and renderer."""
+        if self.renderer is not None:
+            self.renderer.close()
+        super().close()

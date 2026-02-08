@@ -3,7 +3,6 @@ Evaluation script for trained RL lane allocation model.
 Runs the policy and reports traffic flow metrics.
 """
 
-import argparse
 import os
 
 import numpy as np
@@ -12,15 +11,28 @@ from stable_baselines3 import PPO
 from ai.lane_allocation.environment import load_rl_env
 
 
-def evaluate_model(model_path: str, num_episodes: int = 10, render: bool = False):
+def evaluate_model(
+    config,
+    model_path: str | None = None,
+    num_episodes: int | None = None,
+    render: bool = False,
+):
     """
     Evaluate a trained PPO model on the highway environment.
 
     Args:
-        model_path: Path to the saved model
-        num_episodes: Number of episodes to run
-        render: Whether to render the environment
+        config: RLConfig instance
+        model_path: Path to the saved model (overrides config)
+        num_episodes: Number of episodes to run (overrides config)
+        render: Whether to render the environment (overrides config)
     """
+    eval_config = config.get_evaluation_config()
+    env_config = config.get_environment_config()
+
+    # Use provided values or fall back to config
+    model_path = model_path or eval_config.get("model_path", "./logs/ppo_lane_final")
+    num_episodes = num_episodes or eval_config.get("num_episodes", 10)
+    render = render or eval_config.get("render", False)
     print("=" * 60)
     print(f"Evaluating model: {model_path}")
     print("=" * 60)
@@ -33,17 +45,8 @@ def evaluate_model(model_path: str, num_episodes: int = 10, render: bool = False
     model = PPO.load(model_path)
     print("✓ Model loaded successfully")
 
-    # Create environment
-    config = {
-        "num_lanes": 3,
-        "road_length": 1000.0,
-        "dt": 0.2,
-        "spawn_rate": 0.8,  # High traffic density for testing
-        "max_episode_steps": 300,
-        "max_speed": 33.33,
-        "min_speed": 8.33,
-    }
-    env = load_rl_env(config)
+    # Create environment with config
+    env = load_rl_env(env_config)
     print("✓ Environment created")
 
     # Run evaluation episodes
@@ -111,11 +114,20 @@ def evaluate_model(model_path: str, num_episodes: int = 10, render: bool = False
     score = 0
     comments = []
 
+    # Get evaluation thresholds from config
+    thresholds = config.get("evaluation.thresholds", {})
+    excellent_speed = thresholds.get("excellent_speed", 28.0)
+    good_speed = thresholds.get("good_speed", 22.0)
+    smooth_std = thresholds.get("smooth_std", 3.0)
+    moderate_std = thresholds.get("moderate_std", 6.0)
+    efficient_lane_changes = thresholds.get("efficient_lane_changes", 5)
+    moderate_lane_changes = thresholds.get("moderate_lane_changes", 10)
+
     # Speed score
-    if avg_speed > 28:  # > 100 km/h
+    if avg_speed > excellent_speed:
         score += 25
         comments.append("✓ Excellent speed maintenance")
-    elif avg_speed > 22:  # > 80 km/h
+    elif avg_speed > good_speed:
         score += 15
         comments.append("○ Good speed, could be faster")
     else:
@@ -123,10 +135,10 @@ def evaluate_model(model_path: str, num_episodes: int = 10, render: bool = False
         comments.append("✗ Low average speed")
 
     # Smoothness score
-    if avg_speed_std < 3:
+    if avg_speed_std < smooth_std:
         score += 25
         comments.append("✓ Very smooth traffic flow")
-    elif avg_speed_std < 6:
+    elif avg_speed_std < moderate_std:
         score += 15
         comments.append("○ Moderate stop-and-go behavior")
     else:
@@ -142,10 +154,10 @@ def evaluate_model(model_path: str, num_episodes: int = 10, render: bool = False
         comments.append(f"✗ {total_collisions} collisions detected")
 
     # Efficiency score
-    if avg_lane_changes < 5:
+    if avg_lane_changes < efficient_lane_changes:
         score += 25
         comments.append("✓ Efficient lane usage")
-    elif avg_lane_changes < 10:
+    elif avg_lane_changes < moderate_lane_changes:
         score += 15
         comments.append("○ Moderate lane changes")
     else:
@@ -168,25 +180,20 @@ def evaluate_model(model_path: str, num_episodes: int = 10, render: bool = False
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate RL lane allocation model")
-    parser.add_argument(
-        "--model",
-        type=str,
-        default="./logs/ppo_lane_final",
-        help="Path to trained model (without .zip extension)",
-    )
-    parser.add_argument(
-        "--episodes",
-        type=int,
-        default=10,
-        help="Number of evaluation episodes",
-    )
-    parser.add_argument(
-        "--render",
-        action="store_true",
-        help="Render environment during evaluation",
-    )
+    from ai.lane_allocation.config_utils import create_evaluation_parser, load_config
 
+    parser = create_evaluation_parser()
     args = parser.parse_args()
 
-    evaluate_model(args.model, args.episodes, args.render)
+    # Load configuration
+    config = load_config(args.config)
+    config.apply_cli_overrides(args)
+
+    evaluate_model(
+        config=config,
+        model_path=args.model if hasattr(args, "model") and args.model else None,
+        num_episodes=(
+            args.episodes if hasattr(args, "episodes") and args.episodes else None
+        ),
+        render=args.render if hasattr(args, "render") else False,
+    )
