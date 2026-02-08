@@ -4,10 +4,12 @@ Provides modern, clean UI with real-time metrics and visual feedback.
 """
 
 from collections import deque
-from typing import Any
+from typing import Any, cast
 
 import cv2
 import numpy as np
+
+from shared_src.common import Config
 
 
 class HighwayRenderer:
@@ -24,7 +26,10 @@ class HighwayRenderer:
             config: Visualization configuration dictionary
         """
         self.config = config
-        self.window_name = "Lane Allocation RL - Highway Simulation"
+        self.window_name = (
+            cast(str, Config.get("project_name", "Lane Allocation"))
+            + " - Visualization"
+        )
 
         # Window dimensions
         self.window_width = config.get("window_width", 1400)
