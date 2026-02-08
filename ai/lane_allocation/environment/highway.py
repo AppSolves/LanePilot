@@ -93,6 +93,9 @@ class HighwayEnv(gym.Env):
         # metrics for evaluation
         self.speed_history = []
         self.lane_change_count = 0
+        self.lane_changes_this_step = (
+            0  # Track lane changes in current step for immediate penalty
+        )
         self.hard_braking_count = 0
         self.collision_count = 0
 
@@ -113,6 +116,7 @@ class HighwayEnv(gym.Env):
         self.total_reward = 0.0
         self.speed_history = []
         self.lane_change_count = 0
+        self.lane_changes_this_step = 0
         self.hard_braking_count = 0
         self.collision_count = 0
 
@@ -178,6 +182,7 @@ class HighwayEnv(gym.Env):
 
     def step(self, action):
         self.step_count += 1
+        self.lane_changes_this_step = 0  # Reset counter for this step
 
         if self.multi_vehicle_control:
             # Multi-vehicle mode: apply actions to ALL vehicles
@@ -191,6 +196,7 @@ class HighwayEnv(gym.Env):
                     actions_executed.append(action[i] if executed else 0)
                     if self.vehicles[i].lane != old_lanes[i]:
                         self.lane_change_count += 1
+                        self.lane_changes_this_step += 1
 
             # Store actions for visualization
             self.last_action = np.array(
@@ -268,15 +274,29 @@ class HighwayEnv(gym.Env):
         Returns:
             bool: True if action was executed, False if blocked
         """
+        # Check cooldown to prevent rapid lane switching (increased to 3 seconds)
+        if ego.lane_change_cooldown > 0 or ego.is_changing_lane:
+            return False
+
         if action == 1 and ego.lane > 0:
             # Check safety for left lane change
             if self._is_lane_change_safe(ego, ego.lane - 1):
-                ego.lane -= 1
+                # Start smooth lane change transition
+                ego.source_lane = ego.lane
+                ego.target_lane = ego.lane - 1
+                ego.is_changing_lane = True
+                ego.lane_transition_progress = 0.0
+                ego.lane_change_cooldown = 3.0  # 3 second cooldown (was 1.5s)
                 return True
         elif action == 2 and ego.lane < self.num_lanes - 1:
             # Check safety for right lane change
             if self._is_lane_change_safe(ego, ego.lane + 1):
-                ego.lane += 1
+                # Start smooth lane change transition
+                ego.source_lane = ego.lane
+                ego.target_lane = ego.lane + 1
+                ego.is_changing_lane = True
+                ego.lane_transition_progress = 0.0
+                ego.lane_change_cooldown = 3.0  # 3 second cooldown (was 1.5s)
                 return True
         # action 0: keep lane - do nothing
         return action == 0  # Return True for keep lane, False for blocked lane change
@@ -286,11 +306,25 @@ class HighwayEnv(gym.Env):
         Enhanced safety check for lane changes.
         Checks both front and rear gaps in target lane.
         """
-        min_front_gap = 15.0  # meters
-        min_rear_gap = 10.0  # meters
+        min_front_gap = 25.0  # meters (increased from 20m)
+        min_rear_gap = 20.0  # meters (increased from 15m)
 
         for v in self.vehicles:
-            if v is ego or v.lane != target_lane:
+            if v is ego:
+                continue
+
+            # Check vehicles in target lane, transitioning to it, or transitioning from it
+            is_relevant = (
+                v.lane == target_lane  # Currently in target lane
+                or (
+                    v.is_changing_lane and v.target_lane == target_lane
+                )  # Moving to target lane
+                or (
+                    v.is_changing_lane and v.source_lane == target_lane
+                )  # Leaving target lane (still partially there)
+            )
+
+            if not is_relevant:
                 continue
 
             distance = v.position - ego.position
@@ -301,9 +335,6 @@ class HighwayEnv(gym.Env):
 
             # Vehicle behind in target lane
             if distance < 0 and abs(distance) < min_rear_gap:
-                # Also check if rear vehicle is approaching fast
-                if v.speed > ego.speed + 5.0:  # 5 m/s = 18 km/h faster
-                    return False
                 return False
 
         return True
@@ -314,6 +345,10 @@ class HighwayEnv(gym.Env):
         IDM creates realistic car-following behavior and stop-and-go dynamics.
         """
         for v in self.vehicles:
+            # Decrease lane change cooldown
+            if v.lane_change_cooldown > 0:
+                v.lane_change_cooldown = max(0.0, v.lane_change_cooldown - self.dt)
+
             front = self._vehicle_in_front(v)
 
             # IDM acceleration calculation
@@ -326,6 +361,13 @@ class HighwayEnv(gym.Env):
                 gap = front.position - v.position - v.length
                 speed_diff = v.speed - front.speed
 
+                # Emergency braking if too close
+                if gap < v.length * 0.5:  # Less than half a car length
+                    v.acceleration = (
+                        -v.comfortable_deceleration * 2.0
+                    )  # Double braking force
+                    continue
+
                 # IDM desired gap
                 s_star = (
                     v.min_spacing
@@ -334,16 +376,18 @@ class HighwayEnv(gym.Env):
                     / (2 * np.sqrt(v.max_acceleration * v.comfortable_deceleration))
                 )
 
-                # IDM acceleration
+                # IDM acceleration (prevent division by very small gap)
                 acc_free = v.max_acceleration * (1.0 - (v.speed / v.desired_speed) ** 4)
-                acc_interaction = -v.max_acceleration * (s_star / max(gap, 0.1)) ** 2
+                acc_interaction = (
+                    -v.max_acceleration * (s_star / max(gap, v.length * 0.5)) ** 2
+                )
 
                 v.acceleration = acc_free + acc_interaction
 
             # Clamp acceleration
             v.acceleration = np.clip(
                 v.acceleration,
-                -v.comfortable_deceleration,
+                -v.comfortable_deceleration * 2.0,  # Allow stronger emergency braking
                 v.max_acceleration,
             )
 
@@ -360,20 +404,47 @@ class HighwayEnv(gym.Env):
             # Update position: s = s0 + v*dt + 0.5*a*dt^2
             v.position += v.speed * self.dt + 0.5 * v.acceleration * self.dt**2
 
-        # Check for collisions (vehicles too close)
+            # Update lane transition progress for smooth animation
+            if v.is_changing_lane:
+                v.lane_transition_progress += self.dt / v.lane_transition_duration
+                if v.lane_transition_progress >= 1.0:
+                    # Complete the lane change
+                    v.lane = v.target_lane
+                    v.is_changing_lane = False
+                    v.lane_transition_progress = 0.0
+
+        # Enforce minimum spacing between vehicles in same lane (strong collision prevention)
+        vehicles_by_lane = {}
+        for v in self.vehicles:
+            if v.lane not in vehicles_by_lane:
+                vehicles_by_lane[v.lane] = []
+            vehicles_by_lane[v.lane].append(v)
+
+        # Sort vehicles by position in each lane
+        for lane in vehicles_by_lane:
+            vehicles_by_lane[lane].sort(key=lambda x: x.position)
+
+            # Enforce minimum spacing
+            for i in range(len(vehicles_by_lane[lane]) - 1):
+                v_rear = vehicles_by_lane[lane][i]
+                v_front = vehicles_by_lane[lane][i + 1]
+
+                min_gap = v_rear.length * 3.0  # Minimum 3x vehicle length spacing
+                actual_gap = v_front.position - v_rear.position
+
+                if actual_gap < min_gap:
+                    # Push front vehicle forward
+                    v_front.position = v_rear.position + min_gap
+                    # Adjust speed to maintain gap
+                    v_front.speed = max(v_front.speed, v_rear.speed + 1.0)
+
+        # Check for collisions (for statistics only, spacing is already enforced above)
         for i, v1 in enumerate(self.vehicles):
             for v2 in self.vehicles[i + 1 :]:
                 if v1.lane == v2.lane:
                     distance = abs(v1.position - v2.position)
-                    # Collision if distance less than vehicle length
-                    if distance < v1.length * 1.5:  # Add safety margin
+                    if distance < v1.length * 2.0:
                         self.collision_count += 1
-                        # Emergency separation to prevent complete overlap
-                        if distance < v1.length * 0.5:
-                            if v1.position > v2.position:
-                                v1.position = v2.position + v1.length * 1.5
-                            else:
-                                v2.position = v1.position + v2.length * 1.5
 
         # Remove vehicles beyond road
         self.vehicles = [
@@ -393,7 +464,11 @@ class HighwayEnv(gym.Env):
         # Only spawn if there's enough space
         can_spawn = True
         for v in self.vehicles:
-            if v.lane == lane and v.position < 20.0:
+            # Check both vehicles in lane and those transitioning to it
+            is_in_lane = v.lane == lane or (
+                v.is_changing_lane and v.target_lane == lane
+            )
+            if is_in_lane and v.position < 20.0:
                 can_spawn = False
                 break
 
@@ -416,10 +491,13 @@ class HighwayEnv(gym.Env):
         speed = rd.uniform(self.min_speed, self.max_speed)
         desired_speed = rd.uniform(self.min_speed, self.max_speed)
 
-        # Only spawn if there's enough space
+        # Only spawn if there's enough space (check for vehicles in lane or transitioning to it)
         can_spawn = True
         for v in self.vehicles:
-            if v.lane == lane and v.position < 20.0:
+            is_in_lane = v.lane == lane or (
+                v.is_changing_lane and v.target_lane == lane
+            )
+            if is_in_lane and v.position < 20.0:
                 can_spawn = False
                 break
 
@@ -686,7 +764,12 @@ class HighwayEnv(gym.Env):
             lane_allocation_score /= max(1, len(self.vehicles))
             reward += 2.0 * lane_allocation_score
 
-            # 3. Lane utilization balance (prevent all cars in one lane)
+            # 3. Immediate lane change penalty (prevents oscillating behavior)
+            # Each lane change costs -0.4, making frequent changes expensive
+            if self.lane_changes_this_step > 0:
+                reward -= 0.4 * self.lane_changes_this_step
+
+            # 4. Lane utilization balance (prevent all cars in one lane)
             lane_counts = [
                 sum(1 for v in self.vehicles if v.lane == i)
                 for i in range(self.num_lanes)
@@ -695,12 +778,12 @@ class HighwayEnv(gym.Env):
                 lane_distribution_variance = np.var(lane_counts) / len(self.vehicles)
                 reward -= 0.5 * lane_distribution_variance  # Penalize clustering
 
-            # 4. Smooth traffic flow: minimize speed variance
+            # 5. Smooth traffic flow: minimize speed variance
             if len(self.vehicles) > 1:
                 speed_variance = np.var([v.speed for v in self.vehicles])
                 reward -= 0.02 * speed_variance  # Penalize stop-and-go
 
-            # 5. Safety: Penalize vehicles that are too close
+            # 6. Safety: Penalize vehicles that are too close
             for v in self.vehicles:
                 front = self._vehicle_in_front(v)
                 if front and front.lane == v.lane:
@@ -709,16 +792,6 @@ class HighwayEnv(gym.Env):
                         reward -= 2.0  # Collision risk
                     elif gap < 8.0:
                         reward -= 0.5  # Too close
-
-            # 6. Penalize excessive lane changes (efficiency)
-            # This is tracked over time via self.lane_change_count
-            # Small per-step penalty for any lane change
-            if self.step_count > 0 and self.lane_change_count > 0:
-                lane_change_rate = self.lane_change_count / self.step_count
-                if (
-                    lane_change_rate > 0.1
-                ):  # More than 10% of steps involve lane changes
-                    reward -= 0.5
 
             # 7. Collision penalty
             if self.collision_count > 0:

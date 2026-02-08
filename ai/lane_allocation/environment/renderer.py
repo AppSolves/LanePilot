@@ -229,7 +229,7 @@ class HighwayRenderer:
         # Mode indicator banner
         if multi_vehicle_control:
             mode_text = "CENTRALIZED TRAFFIC CONTROL - ALL VEHICLES RL-CONTROLLED"
-            color_key = "RED=Slow | BLUE=Medium | GREEN=Fast"
+            color_key = "RED=Slow | ORANGE=Medium | GREEN=Fast"
 
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = 0.5
@@ -307,8 +307,18 @@ class HighwayRenderer:
             progress = vehicle.position / road_length
             y = int(self.highway_height * (1 - progress))
 
-            # Lane position
-            x = int(vehicle.lane * lane_width + lane_width // 2)
+            # Lane position with smooth transition animation
+            if vehicle.is_changing_lane:
+                # Interpolate between source and target lane
+                visual_lane = (
+                    vehicle.source_lane
+                    + (vehicle.target_lane - vehicle.source_lane)
+                    * vehicle.lane_transition_progress
+                )
+            else:
+                visual_lane = float(vehicle.lane)
+
+            x = int(visual_lane * lane_width + lane_width // 2)
 
             # Determine color
             if multi_vehicle_control:

@@ -6,8 +6,8 @@ environment:
   num_lanes: 3 # Number of highway lanes
   road_length: 1000.0 # Road length in meters
   dt: 0.2 # Simulation timestep in seconds
-  spawn_rate: 0.5 # Initial vehicle spawn rate (vehicles/second)
-  max_episode_steps: 300 # Maximum steps per episode
+  spawn_rate: 0.3 # Initial vehicle spawn rate (vehicles/second) - reduced to prevent overcrowding
+  max_episode_steps: 3000 # Maximum steps per episode (3000 steps = ~1.5 minutes)
   max_speed: 33.33 # Maximum speed in m/s (~120 km/h)
   min_speed: 8.33 # Minimum speed in m/s (~30 km/h)
 

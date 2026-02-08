@@ -9,7 +9,6 @@ import time
 from pathlib import Path
 
 import cv2
-import numpy as np
 from stable_baselines3 import PPO
 
 # Add parent directory to path
@@ -37,6 +36,7 @@ class VisualizationController:
         self.env_config = config.get_environment_config()
         self.vis_config = config.get_visualization_config()
         self.eval_config = config.get_evaluation_config()
+        self.train_config = config.get_training_config()
 
         # Set render mode for environment
         self.env_config["render_mode"] = "human"
@@ -74,8 +74,10 @@ class VisualizationController:
             print("  python -m ai.lane_allocation.train")
             sys.exit(1)
 
-        self.model = PPO.load(model_path)
-        print("✓ Model loaded successfully")
+        # Load device from config
+        device = self.train_config.get("device", "cpu")
+        self.model = PPO.load(model_path, device=device)
+        print(f"✓ Model loaded successfully (device: {device})")
 
         # Create environment
         print(f"✓ Environment: {self.env_config.get('num_lanes', 3)} lanes")
@@ -291,32 +293,34 @@ def main():
     model_path = args.model if hasattr(args, "model") and args.model else None
     if model_path is None:
         # Try to find the latest trained model
-        log_dir = Path(config.get("training.log_dir", "./logs"))
+        log_dir = Path(config.get("training.log_dir", "./runtime/logs"))
 
-        # Look for ppo_lane_final.zip first
-        final_model = log_dir / "ppo_lane_allocation_*" / "ppo_lane_final.zip"
+        # Look for best_model.zip first (preferred)
         import glob
 
-        candidates = glob.glob(str(final_model))
+        best_model = log_dir / "ppo_lane_allocation_*" / "best_model.zip"
+        candidates = glob.glob(str(best_model))
 
         if candidates:
-            # Get most recent
+            # Get most recent best model
             model_path = str(
                 Path(max(candidates, key=os.path.getmtime)).with_suffix("")
             )
+            print(f"Using best model checkpoint: {model_path}")
         else:
-            # Look for best_model.zip
-            best_model = log_dir / "ppo_lane_allocation_*" / "best_model.zip"
-            candidates = glob.glob(str(best_model))
+            # Fall back to final model
+            final_model = log_dir / "ppo_lane_allocation_*" / "ppo_lane_final.zip"
+            candidates = glob.glob(str(final_model))
 
             if candidates:
                 model_path = str(
                     Path(max(candidates, key=os.path.getmtime)).with_suffix("")
                 )
+                print(f"Using final model checkpoint: {model_path}")
             else:
                 # Fall back to default
                 model_path = config.get(
-                    "evaluation.model_path", "./logs/ppo_lane_final"
+                    "evaluation.model_path", "./runtime/logs/ppo_lane_final"
                 )
 
         print(f"Auto-detected model: {model_path}")

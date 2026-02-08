@@ -28,6 +28,7 @@ def evaluate_model(
     """
     eval_config = config.get_evaluation_config()
     env_config = config.get_environment_config()
+    train_config = config.get_training_config()
 
     # Use provided values or fall back to config
     model_path = model_path or eval_config.get(
@@ -35,8 +36,13 @@ def evaluate_model(
     )
     num_episodes = num_episodes or eval_config.get("num_episodes", 10)
     render = render or eval_config.get("render", False)
+
+    # Get device from training config
+    device = train_config.get("device", "cpu")
+
     print("=" * 60)
     print(f"Evaluating model: {model_path}")
+    print(f"Device: {device}")
     print("=" * 60)
 
     # Load model
@@ -44,7 +50,7 @@ def evaluate_model(
         print(f"Error: Model not found at {model_path}.zip")
         return
 
-    model = PPO.load(model_path)
+    model = PPO.load(model_path, device=device)
     print("✓ Model loaded successfully")
 
     # Create environment with config
