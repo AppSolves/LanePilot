@@ -32,7 +32,7 @@ training:
   gamma: 0.99 # Discount factor
   gae_lambda: 0.95 # GAE lambda parameter
   clip_range: 0.2 # PPO clipping parameter
-  ent_coef: 0.02 # Entropy coefficient (higher for multi-vehicle exploration)
+  ent_coef: 0.035 # Entropy coefficient (higher for multi-vehicle exploration)
   vf_coef: 0.5 # Value function coefficient
   max_grad_norm: 0.5 # Gradient clipping
 
@@ -70,7 +70,7 @@ curriculum:
 # Lane Diversity Training
 # Train on multiple lane configurations for better generalization
 lane_diversity:
-  enabled: true # Enable diverse lane training (set to true for production-ready models)
+  enabled: false # Enable diverse lane training (set to true for production-ready models)
   lane_configs: [3, 4, 5, 7] # List of lane configurations to train on (cycles through these)
   # Recommended configs:
   # - Basic: [3, 4, 5] - trains on 3-5 lanes, generalizes to nearby configs
