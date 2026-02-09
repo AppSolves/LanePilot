@@ -68,10 +68,17 @@ class HighwayEnv(gym.Env):
 
         # Observation space:
         # - Single-vehicle mode: local view (15 features)
-        # - Multi-vehicle mode: global state (max_vehicles * 5 features + 6 global features)
+        # - Multi-vehicle mode: global state (max_vehicles * 5 features + fixed global features)
         if self.multi_vehicle_control:
             # Per-vehicle: [lane, position, speed, acceleration, target_speed] = 5 features
-            # Global: [lane_density_0, lane_density_1, lane_density_2, avg_speed_0, avg_speed_1, avg_speed_2] = 6 features
+            # Global features (fixed size for any num_lanes):
+            #   - avg_speed_all (1)
+            #   - speed_std_all (1)
+            #   - num_vehicles_norm (1)
+            #   - num_lanes_norm (1) - NEW: tells network how many lanes are active
+            #   - lane_balance_score (1) - variance in lane distribution
+            #   - collision_rate (1)
+            # Total global: 6 features (fixed)
             obs_len = self.max_vehicles * 5 + 6
             self.observation_space = spaces.Box(
                 low=0.0, high=1.0, shape=(obs_len,), dtype=np.float32
@@ -186,16 +193,23 @@ class HighwayEnv(gym.Env):
 
         if self.multi_vehicle_control:
             # Multi-vehicle mode: apply actions to ALL vehicles
+            # Capture state BEFORE any modifications
+            num_vehicles_before = len(self.vehicles)
             old_is_changing = [v.is_changing_lane for v in self.vehicles]
 
             # Apply actions to existing vehicles (action is array of size max_vehicles)
             actions_executed = []
-            for i in range(min(len(self.vehicles), self.max_vehicles)):
+            for i in range(min(num_vehicles_before, self.max_vehicles)):
                 if i < len(action):
                     executed = self._apply_action(self.vehicles[i], action[i])
                     actions_executed.append(action[i] if executed else 0)
                     # Track lane changes when they START (not when they complete)
-                    if not old_is_changing[i] and self.vehicles[i].is_changing_lane:
+                    # Safe access since i < num_vehicles_before
+                    if (
+                        i < len(old_is_changing)
+                        and not old_is_changing[i]
+                        and self.vehicles[i].is_changing_lane
+                    ):
                         self.lane_change_count += 1
                         self.lane_changes_this_step += 1
 
@@ -565,14 +579,63 @@ class HighwayEnv(gym.Env):
                     # Padding for non-existent vehicles
                     obs.extend([0.0, 0.0, 0.0, 0.0, 0.0])
 
-            # Global features (lane densities and average speeds)
-            for lane_id in range(self.num_lanes):
-                density = self._lane_density(lane_id) / 50.0
-                obs.append(np.clip(density, 0, 1))
+            # Global features (fixed size, independent of num_lanes)
+            # These aggregate statistics work for any lane configuration
 
-            for lane_id in range(self.num_lanes):
-                avg_speed = self._lane_avg_speed(lane_id)
-                obs.append(np.clip(avg_speed, 0, 1))
+            # 1. Global average speed
+            if len(self.vehicles) > 0:
+                avg_speed_all = sum(v.speed for v in self.vehicles) / len(self.vehicles)
+                avg_speed_norm = np.clip(
+                    (avg_speed_all - self.min_speed)
+                    / (self.max_speed - self.min_speed),
+                    0,
+                    1,
+                )
+            else:
+                avg_speed_norm = 0.5
+
+            # 2. Speed variance (smoothness indicator)
+            if len(self.vehicles) > 1:
+                speed_std = np.std([v.speed for v in self.vehicles])
+                speed_std_norm = np.clip(
+                    speed_std / 10.0, 0, 1
+                )  # Normalize by typical std
+            else:
+                speed_std_norm = 0.0
+
+            # 3. Number of vehicles (traffic density)
+            num_vehicles_norm = len(self.vehicles) / self.max_vehicles
+
+            # 4. Number of lanes (tells network the context)
+            num_lanes_norm = self.num_lanes / 10.0  # Assume max 10 lanes typical
+
+            # 5. Lane balance score (how evenly distributed)
+            lane_counts = [
+                sum(1 for v in self.vehicles if v.lane == i)
+                for i in range(self.num_lanes)
+            ]
+            if len(self.vehicles) >= self.num_lanes:
+                ideal_per_lane = len(self.vehicles) / self.num_lanes
+                balance_variance = np.var(lane_counts) / max(1, ideal_per_lane)
+                lane_balance_norm = np.clip(
+                    1.0 - balance_variance / 5.0, 0, 1
+                )  # 1.0 = perfect balance
+            else:
+                lane_balance_norm = 1.0
+
+            # 6. Collision risk indicator
+            collision_risk = min(self.collision_count / 10.0, 1.0)  # Normalize
+
+            obs.extend(
+                [
+                    avg_speed_norm,
+                    speed_std_norm,
+                    num_vehicles_norm,
+                    num_lanes_norm,
+                    lane_balance_norm,
+                    collision_risk,
+                ]
+            )
 
             return np.array(obs, dtype=np.float32)
 
@@ -703,20 +766,20 @@ class HighwayEnv(gym.Env):
 
     def _compute_reward(self):
         """
-        Comprehensive reward function optimizing for:
+        Dynamic, context-aware reward function for scalable traffic optimization.
 
-        Multi-vehicle mode (Centralized Traffic Management):
-        1. Global average speed (throughput optimization)
-        2. Lane allocation quality (fast left, slow right)
-        3. Lane utilization balance (prevent clustering)
-        4. Smooth traffic flow (minimize speed variance)
-        5. Penalize unnecessary lane changes
+        Adapts to:
+        - Different lane counts (3, 5, 10, 20 lanes)
+        - Variable traffic density
+        - Diverse speed distributions
+        - Lane blockages/construction scenarios
 
-        Single-vehicle mode:
-        1. High speed (efficiency)
-        2. Safe following distance
-        3. Smooth traffic flow
-        4. Efficient lane usage
+        Core philosophy:
+        1. Compute dynamic speed tiers (percentiles, not fixed thresholds)
+        2. Evaluate lane health (density, flow, variance)
+        3. Score vehicle-lane fit quality
+        4. Optimize global throughput with balanced utilization
+        5. Minimize unnecessary disruptions (lane changes)
         """
         reward = 0.0
 
@@ -725,81 +788,162 @@ class HighwayEnv(gym.Env):
             if len(self.vehicles) == 0:
                 return 0.0
 
-            # 1. Lane Allocation Quality: Fast cars left, slow cars right (PRIMARY OBJECTIVE)
-            # For each lane, check if vehicles are appropriately placed based on desired_speed
-            lane_allocation_score = 0.0
-            for v in self.vehicles:
-                # Expected lane based on desired speed
-                # Slow cars (desired_speed < 0.4*max) should be in lane 2 (right)
-                # Medium cars (0.4-0.7*max) should be in lane 1 (middle)
-                # Fast cars (>0.7*max) should be in lane 0 (left)
-                speed_ratio = v.desired_speed / self.max_speed
+            # PHASE 1: Compute dynamic speed distribution
+            all_desired_speeds = [v.desired_speed for v in self.vehicles]
+            if len(all_desired_speeds) < 3:
+                # Too few vehicles, use fixed thresholds as fallback
+                slow_threshold = self.max_speed * 0.33
+                fast_threshold = self.max_speed * 0.67
+            else:
+                # Dynamic percentiles adapt to current traffic
+                slow_threshold = np.percentile(all_desired_speeds, 33)
+                fast_threshold = np.percentile(all_desired_speeds, 67)
 
-                # Also check if vehicle is transitioning - use target lane for scoring
+            # PHASE 2: Compute lane health metrics
+            lane_metrics = {}
+            for lane_id in range(self.num_lanes):
+                vehicles_in_lane = [v for v in self.vehicles if v.lane == lane_id]
+
+                if len(vehicles_in_lane) > 0:
+                    avg_speed = np.mean([v.speed for v in vehicles_in_lane])
+                    avg_desired_speed = np.mean(
+                        [v.desired_speed for v in vehicles_in_lane]
+                    )
+                    speed_variance = (
+                        np.var([v.speed for v in vehicles_in_lane])
+                        if len(vehicles_in_lane) > 1
+                        else 0.0
+                    )
+                    density = len(vehicles_in_lane) / (
+                        self.road_length / 100.0
+                    )  # vehicles per 100m
+                    lane_throughput = len(vehicles_in_lane) * avg_speed
+                else:
+                    avg_speed = self.max_speed
+                    avg_desired_speed = self.max_speed
+                    speed_variance = 0.0
+                    density = 0.0
+                    lane_throughput = 0.0
+
+                lane_metrics[lane_id] = {
+                    "count": len(vehicles_in_lane),
+                    "avg_speed": avg_speed,
+                    "avg_desired_speed": avg_desired_speed,
+                    "speed_variance": speed_variance,
+                    "density": density,
+                    "throughput": lane_throughput,
+                }
+
+            # PHASE 3: Dynamic lane allocation scoring
+            placement_score = 0.0
+
+            for v in self.vehicles:
                 vehicle_lane = v.target_lane if v.is_changing_lane else v.lane
 
-                if speed_ratio < 0.4:  # Slow vehicle
-                    if vehicle_lane == self.num_lanes - 1:  # Rightmost lane
-                        lane_allocation_score += 1.0
-                    elif vehicle_lane == self.num_lanes - 2:  # Middle acceptable
-                        lane_allocation_score += 0.3
-                    else:  # Wrong lane
-                        lane_allocation_score -= 0.8  # Stronger penalty
+                # Calculate ideal lane position based on speed percentile
+                speed_percentile = np.searchsorted(
+                    sorted(all_desired_speeds), v.desired_speed
+                ) / len(all_desired_speeds)
+                # Fast vehicles (high percentile) → left (low lane index)
+                # Slow vehicles (low percentile) → right (high lane index)
+                ideal_relative_position = 1.0 - speed_percentile
+                ideal_lane = ideal_relative_position * (self.num_lanes - 1)
 
-                elif speed_ratio < 0.7:  # Medium speed vehicle
-                    if vehicle_lane == 1:  # Middle lane (for 3-lane highway)
-                        lane_allocation_score += 1.0
-                    else:
-                        lane_allocation_score += 0.3
+                # Current lane as relative position
+                current_relative_position = vehicle_lane / max(1, self.num_lanes - 1)
 
-                else:  # Fast vehicle
-                    if vehicle_lane == 0:  # Leftmost lane
-                        lane_allocation_score += 1.0
-                    elif vehicle_lane == 1:
-                        lane_allocation_score += 0.3
-                    else:  # Wrong lane
-                        lane_allocation_score -= 0.8  # Stronger penalty
+                # Distance from ideal position
+                position_error = abs(ideal_lane - vehicle_lane)
+                position_match_score = max(0, 1.0 - position_error / self.num_lanes)
+                placement_score += position_match_score
 
-            lane_allocation_score /= max(1, len(self.vehicles))
-            reward += (
-                15.0 * lane_allocation_score
-            )  # MUCH higher weight - this is the main goal!
+                # Bonus for being in optimal tier
+                if v.desired_speed < slow_threshold:  # Slow tier
+                    if vehicle_lane >= self.num_lanes // 2:  # Right half
+                        placement_score += 0.5
+                elif v.desired_speed > fast_threshold:  # Fast tier
+                    if vehicle_lane < (self.num_lanes + 1) // 2:  # Left half
+                        placement_score += 0.5
+                else:  # Medium tier
+                    middle_lane = self.num_lanes // 2
+                    if abs(vehicle_lane - middle_lane) <= 1:  # Near middle
+                        placement_score += 0.5
 
-            # 2. Global average speed (secondary objective)
-            avg_speed = sum(v.speed for v in self.vehicles) / len(self.vehicles)
-            speed_ratio = avg_speed / self.max_speed
-            reward += 3.0 * speed_ratio  # Reduced from 5.0 - speed is secondary
+                # Penalty for being in overcrowded lanes (dynamic capacity awareness)
+                lane_density = lane_metrics[vehicle_lane]["density"]
+                optimal_density = 0.12  # 12 vehicles per 100m ≈ 8.3m spacing
+                if lane_density > optimal_density * 1.5:  # 50% over capacity
+                    overcrowding_penalty = (lane_density - optimal_density) * 2.0
+                    placement_score -= min(overcrowding_penalty, 2.0)
 
-            # 3. Immediate lane change penalty (prevents oscillating behavior)
-            # Each lane change costs -1.5, making frequent changes very expensive
-            if self.lane_changes_this_step > 0:
-                reward -= 1.5 * self.lane_changes_this_step
+                # Penalty for blocking (slower vehicle ahead of faster vehicle)
+                for other in self.vehicles:
+                    if other.lane == vehicle_lane and other.position > v.position:
+                        distance = other.position - v.position
+                        if distance < 50.0:  # Within interaction range
+                            if v.desired_speed < other.desired_speed - 3.0:
+                                # This vehicle is slower and potentially blocking
+                                blocking_severity = (
+                                    other.desired_speed - v.desired_speed
+                                ) / 10.0
+                                placement_score -= min(blocking_severity, 1.5)
 
-            # 4. Lane utilization balance (prevent all cars in one lane)
-            lane_counts = [
-                sum(1 for v in self.vehicles if v.lane == i)
-                for i in range(self.num_lanes)
-            ]
+            # Normalize by vehicle count
+            placement_score /= max(1, len(self.vehicles))
+            reward += 12.0 * placement_score  # Primary objective
+
+            # PHASE 4: Global throughput optimization
+            total_throughput = sum(v.speed for v in self.vehicles)
+            max_possible_throughput = len(self.vehicles) * self.max_speed
+            throughput_ratio = total_throughput / max(max_possible_throughput, 1.0)
+            reward += 5.0 * throughput_ratio  # High throughput = efficient system
+
+            # PHASE 5: Lane balance - prevent all vehicles clustering in one lane
+            lane_counts = [lane_metrics[i]["count"] for i in range(self.num_lanes)]
+            if (
+                len(self.vehicles) > 1
+            ):  # Need at least 2 vehicles to have balance issues
+                # Calculate how evenly distributed vehicles are
+                ideal_per_lane = len(self.vehicles) / self.num_lanes
+                balance_penalty = sum(
+                    [abs(count - ideal_per_lane) for count in lane_counts]
+                ) / len(self.vehicles)
+                reward -= 2.0 * balance_penalty  # Penalize severe imbalance
+
+            # PHASE 6: Per-lane flow quality
+            per_lane_flow_score = 0.0
+            for lane_id in range(self.num_lanes):
+                metrics = lane_metrics[lane_id]
+                if metrics["count"] > 1:
+                    # Reward smooth flow within each lane (low variance)
+                    smoothness = 1.0 / (1.0 + metrics["speed_variance"] / 10.0)
+                    per_lane_flow_score += smoothness * metrics["count"]
+
             if len(self.vehicles) > 0:
-                lane_distribution_variance = np.var(lane_counts) / len(self.vehicles)
-                reward -= 0.5 * lane_distribution_variance  # Penalize clustering
+                per_lane_flow_score /= len(self.vehicles)
+                reward += 3.0 * per_lane_flow_score
 
-            # 5. Smooth traffic flow: minimize speed variance
-            if len(self.vehicles) > 1:
-                speed_variance = np.var([v.speed for v in self.vehicles])
-                reward -= 0.02 * speed_variance  # Penalize stop-and-go
+            # PHASE 7: Stability - penalize lane changes (prevents oscillation)
+            if self.lane_changes_this_step > 0:
+                # Each lane change costs proportional to traffic density
+                # In heavy traffic, lane changes are more disruptive
+                traffic_density = len(self.vehicles) / self.max_vehicles
+                change_penalty = 1.0 + traffic_density  # 1.0 to 2.0 range
+                reward -= change_penalty * self.lane_changes_this_step
 
-            # 6. Safety: Penalize vehicles that are too close
+            # PHASE 8: Safety - critical for all scenarios
+            safety_penalty = 0.0
             for v in self.vehicles:
                 front = self._vehicle_in_front(v)
                 if front and front.lane == v.lane:
                     gap = front.position - v.position - v.length
                     if gap < 3.0:
-                        reward -= 2.0  # Collision risk
+                        safety_penalty += 2.0  # Collision imminent
                     elif gap < 8.0:
-                        reward -= 0.5  # Too close
+                        safety_penalty += 0.5  # Too close
+            reward -= safety_penalty
 
-            # 7. Collision penalty
+            # PHASE 9: Collision penalty (absolute constraint)
             if self.collision_count > 0:
                 reward -= 10.0
 

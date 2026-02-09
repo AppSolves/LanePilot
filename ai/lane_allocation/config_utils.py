@@ -297,6 +297,11 @@ def create_evaluation_parser() -> argparse.ArgumentParser:
     env_group = parser.add_argument_group("Environment")
     env_group.add_argument("--spawn-rate", type=float, help="Vehicle spawn rate")
     env_group.add_argument("--num-lanes", type=int, help="Number of lanes")
+    env_group.add_argument(
+        "--lane-diversity",
+        action="store_true",
+        help="Test model on multiple lane configurations [3,4,5,7]",
+    )
 
     return parser
 
@@ -339,6 +344,11 @@ def create_visualization_parser() -> argparse.ArgumentParser:
     env_group.add_argument("--spawn-rate", type=float, help="Vehicle spawn rate")
     env_group.add_argument("--num-lanes", type=int, help="Number of lanes")
     env_group.add_argument("--episodes", type=int, help="Number of episodes to run")
+    env_group.add_argument(
+        "--lane-diversity",
+        action="store_true",
+        help="Cycle through multiple lane configurations [3,4,5,7]",
+    )
 
     return parser
 

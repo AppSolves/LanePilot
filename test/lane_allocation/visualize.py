@@ -21,13 +21,14 @@ from ai.lane_allocation.environment import load_rl_env
 class VisualizationController:
     """Controls the visualization loop with keyboard interaction."""
 
-    def __init__(self, config, model_path: str):
+    def __init__(self, config, model_path: str, lane_diversity: bool = False):
         """
         Initialize the visualization controller.
 
         Args:
             config: RLConfig instance
             model_path: Path to trained model
+            lane_diversity: Cycle through multiple lane configurations [3,4,5,7]
         """
         self.config = config
         self.model_path = model_path
@@ -56,6 +57,17 @@ class VisualizationController:
         self.running = True
         self.speed_multiplier = 1.0
         self.show_obs = False
+
+        # Lane diversity
+        self.lane_diversity = lane_diversity
+        self.lane_configs = (
+            [3, 4, 5, 7] if lane_diversity else [self.env_config.get("num_lanes", 3)]
+        )
+        self.initial_num_lanes = self.env_config.get("num_lanes", 3)
+        if lane_diversity:
+            print(
+                f"🔄 Lane Diversity Mode: Will cycle through {self.lane_configs} lanes"
+            )
 
         # Video recording
         self.recording_config = self.vis_config.get("recording", {})
@@ -136,7 +148,15 @@ class VisualizationController:
         try:
             while self.running and (num_episodes == 0 or episode < num_episodes):
                 episode += 1
-                self._run_episode(episode)
+                # Cycle through lane configurations if lane diversity enabled
+                if self.lane_diversity:
+                    current_lanes = self.lane_configs[
+                        (episode - 1) % len(self.lane_configs)
+                    ]
+                    self.env.num_lanes = current_lanes
+                else:
+                    current_lanes = self.lane_configs[0]
+                self._run_episode(episode, current_lanes)
 
         except KeyboardInterrupt:
             print("\n⚠️  Interrupted by user")
@@ -144,10 +164,13 @@ class VisualizationController:
         finally:
             self._cleanup()
 
-    def _run_episode(self, episode_num: int):
+    def _run_episode(self, episode_num: int, num_lanes: int):
         """Run a single episode."""
         print(f"\n{'='*60}")
-        print(f"Episode {episode_num}")
+        if self.lane_diversity:
+            print(f"Episode {episode_num} - Testing with {num_lanes} lanes")
+        else:
+            print(f"Episode {episode_num}")
         print(f"{'='*60}")
 
         obs, _ = self.env.reset()
@@ -330,8 +353,15 @@ def main():
         args.episodes if hasattr(args, "episodes") and args.episodes else 0  # infinite
     )
 
+    # Check lane diversity
+    lane_diversity = (
+        args.lane_diversity
+        if hasattr(args, "lane_diversity") and args.lane_diversity
+        else False
+    )
+
     # Create and run controller
-    controller = VisualizationController(config, model_path)
+    controller = VisualizationController(config, model_path, lane_diversity)
     controller.run(num_episodes)
 
 

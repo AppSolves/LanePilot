@@ -7,7 +7,7 @@ environment:
   road_length: 1000.0 # Road length in meters
   dt: 0.2 # Simulation timestep in seconds
   spawn_rate: 0.3 # Initial vehicle spawn rate (vehicles/second) - reduced to prevent overcrowding
-  max_episode_steps: 3000 # Maximum steps per episode (3000 steps = ~1.5 minutes)
+  max_episode_steps: 10000 # Maximum steps per episode (10000 steps = ~33 minutes at 0.2s/step, near-infinite for visualization)
   max_speed: 33.33 # Maximum speed in m/s (~120 km/h)
   min_speed: 8.33 # Minimum speed in m/s (~30 km/h)
 
@@ -66,6 +66,17 @@ curriculum:
   initial_spawn_rate: 0.3 # Starting spawn rate (easy)
   final_spawn_rate: 0.8 # Final spawn rate (hard)
   steps_to_final: 200000 # Steps to reach final difficulty
+
+# Lane Diversity Training
+# Train on multiple lane configurations for better generalization
+lane_diversity:
+  enabled: true # Enable diverse lane training (set to true for production-ready models)
+  lane_configs: [3, 4, 5, 7] # List of lane configurations to train on (cycles through these)
+  # Recommended configs:
+  # - Basic: [3, 4, 5] - trains on 3-5 lanes, generalizes to nearby configs
+  # - Advanced: [3, 4, 5, 7] - better generalization to 6-10 lanes
+  # - Full: [3, 4, 5, 6, 7, 8] - maximum generalization (longer training)
+  # Note: Model will automatically cycle through configs each episode
 
 # Callbacks
 callbacks:

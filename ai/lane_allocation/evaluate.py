@@ -16,6 +16,7 @@ def evaluate_model(
     model_path: str | None = None,
     num_episodes: int | None = None,
     render: bool = False,
+    lane_diversity: bool = False,
 ):
     """
     Evaluate a trained PPO model on the highway environment.
@@ -25,6 +26,7 @@ def evaluate_model(
         model_path: Path to the saved model (overrides config)
         num_episodes: Number of episodes to run (overrides config)
         render: Whether to render the environment (overrides config)
+        lane_diversity: Test model on multiple lane configurations [3,4,5,7]
     """
     eval_config = config.get_evaluation_config()
     env_config = config.get_environment_config()
@@ -57,17 +59,34 @@ def evaluate_model(
     env = load_rl_env(env_config)
     print("✓ Environment created")
 
+    # Configure lane diversity
+    lane_configs = [3, 4, 5, 7] if lane_diversity else [env_config.get("num_lanes", 3)]
+    if lane_diversity:
+        print(f"\n🔄 Lane Diversity Mode: Testing on {lane_configs} lanes")
+
     # Run evaluation episodes
     all_metrics = []
     episode_rewards = []
+    metrics_by_lanes = {lanes: [] for lanes in lane_configs}
 
     for episode in range(num_episodes):
+        # Cycle through lane configurations if lane diversity enabled
+        if lane_diversity:
+            current_lanes = lane_configs[episode % len(lane_configs)]
+            env.num_lanes = current_lanes
+            print(f"\n{'='*60}")
+            print(
+                f"Testing with {current_lanes} lanes (Episode {episode + 1}/{num_episodes})"
+            )
+            print(f"{'='*60}")
+        else:
+            current_lanes = lane_configs[0]
+            print(f"\nEpisode {episode + 1}/{num_episodes}:")
+
         obs, _ = env.reset()
         done = False
         total_reward = 0
         step_count = 0
-
-        print(f"\nEpisode {episode + 1}/{num_episodes}:")
 
         while not done:
             action, _ = model.predict(obs, deterministic=True)
@@ -84,6 +103,9 @@ def evaluate_model(
         metrics = env.get_metrics()
         all_metrics.append(metrics)
         episode_rewards.append(total_reward)
+        metrics_by_lanes[current_lanes].append(
+            {"metrics": metrics, "reward": total_reward}
+        )
 
         print(f"  Steps: {step_count}")
         print(f"  Total Reward: {total_reward:.2f}")
@@ -113,6 +135,25 @@ def evaluate_model(
     print(f"Average Hard Braking Events: {avg_hard_braking:.1f}")
     print(f"Total Collisions: {total_collisions}")
     print(f"Average Episode Reward: {avg_reward:.2f}")
+
+    # Lane diversity breakdown
+    if lane_diversity:
+        print("\n" + "=" * 60)
+        print("LANE DIVERSITY BREAKDOWN")
+        print("=" * 60)
+        for lanes in lane_configs:
+            data = metrics_by_lanes[lanes]
+            if not data:
+                continue
+            avg_spd = np.mean([d["metrics"]["avg_speed"] for d in data])
+            avg_chg = np.mean([d["metrics"]["lane_changes"] for d in data])
+            avg_rew = np.mean([d["reward"] for d in data])
+            col = sum([d["metrics"]["collisions"] for d in data])
+            print(f"\n{lanes} Lanes ({len(data)} episodes):")
+            print(f"  Avg Speed: {avg_spd:.2f} m/s ({avg_spd * 3.6:.1f} km/h)")
+            print(f"  Avg Lane Changes: {avg_chg:.1f}")
+            print(f"  Avg Reward: {avg_rew:.2f}")
+            print(f"  Total Collisions: {col}")
 
     # Performance rating
     print("\n" + "=" * 60)
@@ -241,4 +282,9 @@ if __name__ == "__main__":
             args.episodes if hasattr(args, "episodes") and args.episodes else None
         ),
         render=args.render if hasattr(args, "render") else False,
+        lane_diversity=(
+            args.lane_diversity
+            if hasattr(args, "lane_diversity") and args.lane_diversity
+            else False
+        ),
     )

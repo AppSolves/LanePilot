@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 
+import gymnasium as gym
 import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import (
@@ -88,6 +89,64 @@ class CurriculumCallback(BaseCallback):
         return True
 
 
+class LaneDiversityWrapper(gym.Wrapper):
+    """Wrapper that randomly varies num_lanes at each episode reset."""
+
+    def __init__(self, env, lane_configs=None, episode_counter=None):
+        super().__init__(env)
+        self.lane_configs = lane_configs or [3]  # Default to 3 lanes
+        # Validate lane configurations
+        for num_lanes in self.lane_configs:
+            if not (1 <= num_lanes <= 20):
+                raise ValueError(f"Lane count {num_lanes} out of valid range [1, 20]")
+        self.episode_counter = episode_counter or {"count": 0}
+        self.current_lanes = getattr(self.env, "num_lanes", 3)
+
+    def reset(self, **kwargs):
+        # Choose lane configuration for this episode
+        # Use deterministic cycle to ensure balanced training
+        self.episode_counter["count"] += 1
+        lane_idx = self.episode_counter["count"] % len(self.lane_configs)
+        new_num_lanes = self.lane_configs[lane_idx]
+
+        # Update environment configuration
+        self.env.num_lanes = new_num_lanes  # type: ignore[attr-defined]
+        self.current_lanes = new_num_lanes
+
+        return self.env.reset(**kwargs)
+
+
+class LaneDiversityCallback(BaseCallback):
+    """Logs diverse lane training statistics."""
+
+    def __init__(self, lane_configs, verbose=0):
+        super().__init__(verbose)
+        self.lane_configs = lane_configs
+        self.episodes_per_config = {lanes: 0 for lanes in lane_configs}
+
+    def _on_step(self) -> bool:
+        # Track episodes per configuration
+        for idx, done in enumerate(self.locals.get("dones", [])):
+            if done:
+                if hasattr(self.training_env, "envs"):
+                    env = self.training_env.envs[idx]  # type: ignore
+                    if hasattr(env, "current_lanes"):
+                        lanes = env.current_lanes
+                        if lanes in self.episodes_per_config:
+                            self.episodes_per_config[lanes] += 1
+
+        # Periodic logging
+        if self.verbose > 0 and self.num_timesteps % 20000 == 0:
+            print(f"\n=== Lane Diversity Stats ===")
+            total_episodes = sum(self.episodes_per_config.values())
+            if total_episodes > 0:
+                for lanes, count in sorted(self.episodes_per_config.items()):
+                    pct = 100 * count / total_episodes
+                    print(f"  {lanes} lanes: {count} episodes ({pct:.1f}%)")
+
+        return True
+
+
 if __name__ == "__main__":
     from ai.lane_allocation.config_utils import create_training_parser, load_config
 
@@ -105,6 +164,7 @@ if __name__ == "__main__":
     policy_config = config.get_policy_config()
     curriculum_config = config.get("curriculum", {})
     callbacks_config = config.get("callbacks", {})
+    diversity_config = config.get("lane_diversity", {})
 
     # Determine policy type
     use_attention = policy_config.get("type", "attention") == "attention"
@@ -126,10 +186,29 @@ if __name__ == "__main__":
     print(f"Parallel Envs: {train_config.get('n_envs', 4)}")
     print(f"Config file: {config.config_path}")
 
+    # Lane diversity configuration
+    lane_diversity_enabled = diversity_config.get("enabled", False)
+    lane_configs = diversity_config.get("lane_configs", [3, 4, 5])
+
+    if lane_diversity_enabled:
+        print(f"\nLane Diversity Training ENABLED")
+        print(f"   Configurations: {lane_configs} lanes")
+    else:
+        print(f"\n📍 Single Configuration: {env_config.get('num_lanes', 3)} lanes")
+
     # Create environments
+    episode_counter = {"count": 0}  # Shared counter for deterministic diversity
+
     def make_env():
         env = load_rl_env(env_config)
         env = Monitor(env)
+
+        # Wrap with lane diversity if enabled
+        if lane_diversity_enabled:
+            env = LaneDiversityWrapper(
+                env, lane_configs=lane_configs, episode_counter=episode_counter
+            )
+
         return env
 
     # Training environment
@@ -236,6 +315,13 @@ if __name__ == "__main__":
             verbose=1,
         )
         callbacks.append(curriculum_callback)
+
+    # Lane diversity callback
+    if lane_diversity_enabled:
+        lane_diversity_callback = LaneDiversityCallback(
+            lane_configs=lane_configs, verbose=1
+        )
+        callbacks.append(lane_diversity_callback)
 
     print("\n" + "=" * 60)
     print("Starting Training...")
