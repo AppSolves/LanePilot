@@ -279,6 +279,7 @@ class HighwayEnv(gym.Env):
             "reward": reward,
             "step": self.step_count,
             "max_steps": self.max_episode_steps,
+            "num_lanes": self.num_lanes,  # Debug: verify num_lanes context
         }
 
         return obs, reward, done, truncated, info
@@ -289,8 +290,13 @@ class HighwayEnv(gym.Env):
         Returns:
             bool: True if action was executed, False if blocked
         """
-        # Check cooldown to prevent rapid lane switching (increased to 3 seconds)
-        if ego.lane_change_cooldown > 0 or ego.is_changing_lane:
+        # STRICT cooldown enforcement - must wait full duration even after transition completes
+        # This prevents oscillation by ensuring vehicles wait before making another lane change
+        if ego.lane_change_cooldown > 0:
+            return False
+
+        # Also block if currently transitioning
+        if ego.is_changing_lane:
             return False
 
         if action == 1 and ego.lane > 0:
@@ -301,7 +307,10 @@ class HighwayEnv(gym.Env):
                 ego.target_lane = ego.lane - 1
                 ego.is_changing_lane = True
                 ego.lane_transition_progress = 0.0
-                ego.lane_change_cooldown = 3.0  # 3 second cooldown (was 1.5s)
+                # Set cooldown to cover transition (1.5s) + mandatory wait (5s) = 6.5s total
+                ego.lane_change_cooldown = (
+                    9  # Dramatically increased to prevent oscillation
+                )
                 return True
         elif action == 2 and ego.lane < self.num_lanes - 1:
             # Check safety for right lane change
@@ -311,7 +320,10 @@ class HighwayEnv(gym.Env):
                 ego.target_lane = ego.lane + 1
                 ego.is_changing_lane = True
                 ego.lane_transition_progress = 0.0
-                ego.lane_change_cooldown = 3.0  # 3 second cooldown (was 1.5s)
+                # Set cooldown to cover transition (1.5s) + mandatory wait (5s) = 6.5s total
+                ego.lane_change_cooldown = (
+                    9  # Dramatically increased to prevent oscillation
+                )
                 return True
         # action 0: keep lane - do nothing
         return action == 0  # Return True for keep lane, False for blocked lane change
@@ -925,10 +937,11 @@ class HighwayEnv(gym.Env):
 
             # PHASE 7: Stability - penalize lane changes (prevents oscillation)
             if self.lane_changes_this_step > 0:
-                # Each lane change costs proportional to traffic density
-                # In heavy traffic, lane changes are more disruptive
+                # STRONG penalty to prevent oscillation
+                # Each lane change is very costly - stability is critical
                 traffic_density = len(self.vehicles) / self.max_vehicles
-                change_penalty = 1.0 + traffic_density  # 1.0 to 2.0 range
+                # Base penalty 5.0, scales up to 8.0 in heavy traffic
+                change_penalty = 5.0 + (3.0 * traffic_density)
                 reward -= change_penalty * self.lane_changes_this_step
 
             # PHASE 8: Safety - critical for all scenarios

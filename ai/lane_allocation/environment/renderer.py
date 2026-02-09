@@ -596,6 +596,17 @@ class HighwayRenderer:
         )
         y_offset += spacing
 
+        # Number of lanes (for debugging lane diversity)
+        num_lanes = stats.get("num_lanes", 3)
+        self._draw_metric_row(
+            "Lanes:",
+            f"{num_lanes}",
+            panel_x + 10,
+            y_offset,
+            self.color_text,
+        )
+        y_offset += spacing
+
         # Episode step
         step = stats.get("step", 0)
         max_steps = stats.get("max_steps", 300)
