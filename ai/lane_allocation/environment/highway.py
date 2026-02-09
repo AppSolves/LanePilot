@@ -186,15 +186,16 @@ class HighwayEnv(gym.Env):
 
         if self.multi_vehicle_control:
             # Multi-vehicle mode: apply actions to ALL vehicles
-            old_lanes = [v.lane for v in self.vehicles]
-            actions_executed = []
+            old_is_changing = [v.is_changing_lane for v in self.vehicles]
 
             # Apply actions to existing vehicles (action is array of size max_vehicles)
+            actions_executed = []
             for i in range(min(len(self.vehicles), self.max_vehicles)):
                 if i < len(action):
                     executed = self._apply_action(self.vehicles[i], action[i])
                     actions_executed.append(action[i] if executed else 0)
-                    if self.vehicles[i].lane != old_lanes[i]:
+                    # Track lane changes when they START (not when they complete)
+                    if not old_is_changing[i] and self.vehicles[i].is_changing_lane:
                         self.lane_change_count += 1
                         self.lane_changes_this_step += 1
 
@@ -724,12 +725,7 @@ class HighwayEnv(gym.Env):
             if len(self.vehicles) == 0:
                 return 0.0
 
-            # 1. Global average speed (main reward - throughput)
-            avg_speed = sum(v.speed for v in self.vehicles) / len(self.vehicles)
-            speed_ratio = avg_speed / self.max_speed
-            reward += 5.0 * speed_ratio  # Primary objective: high throughput
-
-            # 2. Lane Allocation Quality: Fast cars left, slow cars right
+            # 1. Lane Allocation Quality: Fast cars left, slow cars right (PRIMARY OBJECTIVE)
             # For each lane, check if vehicles are appropriately placed based on desired_speed
             lane_allocation_score = 0.0
             for v in self.vehicles:
@@ -739,35 +735,45 @@ class HighwayEnv(gym.Env):
                 # Fast cars (>0.7*max) should be in lane 0 (left)
                 speed_ratio = v.desired_speed / self.max_speed
 
+                # Also check if vehicle is transitioning - use target lane for scoring
+                vehicle_lane = v.target_lane if v.is_changing_lane else v.lane
+
                 if speed_ratio < 0.4:  # Slow vehicle
-                    if v.lane == self.num_lanes - 1:  # Rightmost lane
+                    if vehicle_lane == self.num_lanes - 1:  # Rightmost lane
                         lane_allocation_score += 1.0
-                    elif v.lane == self.num_lanes - 2:  # Middle acceptable
+                    elif vehicle_lane == self.num_lanes - 2:  # Middle acceptable
                         lane_allocation_score += 0.3
                     else:  # Wrong lane
-                        lane_allocation_score -= 0.5
+                        lane_allocation_score -= 0.8  # Stronger penalty
 
                 elif speed_ratio < 0.7:  # Medium speed vehicle
-                    if v.lane == 1:  # Middle lane (for 3-lane highway)
+                    if vehicle_lane == 1:  # Middle lane (for 3-lane highway)
                         lane_allocation_score += 1.0
                     else:
                         lane_allocation_score += 0.3
 
                 else:  # Fast vehicle
-                    if v.lane == 0:  # Leftmost lane
+                    if vehicle_lane == 0:  # Leftmost lane
                         lane_allocation_score += 1.0
-                    elif v.lane == 1:
+                    elif vehicle_lane == 1:
                         lane_allocation_score += 0.3
-                    else:
-                        lane_allocation_score -= 0.5
+                    else:  # Wrong lane
+                        lane_allocation_score -= 0.8  # Stronger penalty
 
             lane_allocation_score /= max(1, len(self.vehicles))
-            reward += 2.0 * lane_allocation_score
+            reward += (
+                15.0 * lane_allocation_score
+            )  # MUCH higher weight - this is the main goal!
+
+            # 2. Global average speed (secondary objective)
+            avg_speed = sum(v.speed for v in self.vehicles) / len(self.vehicles)
+            speed_ratio = avg_speed / self.max_speed
+            reward += 3.0 * speed_ratio  # Reduced from 5.0 - speed is secondary
 
             # 3. Immediate lane change penalty (prevents oscillating behavior)
-            # Each lane change costs -0.4, making frequent changes expensive
+            # Each lane change costs -1.5, making frequent changes very expensive
             if self.lane_changes_this_step > 0:
-                reward -= 0.4 * self.lane_changes_this_step
+                reward -= 1.5 * self.lane_changes_this_step
 
             # 4. Lane utilization balance (prevent all cars in one lane)
             lane_counts = [
