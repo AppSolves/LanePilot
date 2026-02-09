@@ -188,6 +188,9 @@ def evaluate_model(
 
 
 if __name__ == "__main__":
+    import glob
+    from pathlib import Path
+
     from ai.lane_allocation.config_utils import create_evaluation_parser, load_config
 
     parser = create_evaluation_parser()
@@ -197,9 +200,43 @@ if __name__ == "__main__":
     config = load_config(args.config)
     config.apply_cli_overrides(args)
 
+    # Get model path - prioritize best_model.zip
+    model_path = args.model if hasattr(args, "model") and args.model else None
+    if model_path is None:
+        # Try to find the best trained model
+        log_dir = Path(config.get("training.log_dir", "./runtime/logs"))
+
+        # Look for best_model.zip first (preferred)
+        best_model = log_dir / "ppo_lane_allocation_*" / "best_model.zip"
+        candidates = glob.glob(str(best_model))
+
+        if candidates:
+            # Get most recent best model
+            model_path = str(
+                Path(max(candidates, key=os.path.getmtime)).with_suffix("")
+            )
+            print(f"Using best model checkpoint: {model_path}")
+        else:
+            # Fall back to final model
+            final_model = log_dir / "ppo_lane_allocation_*" / "ppo_lane_final.zip"
+            candidates = glob.glob(str(final_model))
+
+            if candidates:
+                model_path = str(
+                    Path(max(candidates, key=os.path.getmtime)).with_suffix("")
+                )
+                print(f"Using final model checkpoint: {model_path}")
+            else:
+                # Fall back to config default
+                model_path = config.get(
+                    "evaluation.model_path", "./runtime/logs/ppo_lane_final"
+                )
+
+        print(f"Auto-detected model: {model_path}")
+
     evaluate_model(
         config=config,
-        model_path=args.model if hasattr(args, "model") and args.model else None,
+        model_path=model_path,
         num_episodes=(
             args.episodes if hasattr(args, "episodes") and args.episodes else None
         ),
