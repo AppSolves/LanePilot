@@ -24,3 +24,6 @@ assets/trained_models/**/*
 !assets/trained_models/**/*.engine
 !assets/trained_models/**/*.onnx
 !assets/trained_models/**/.gitkeep
+
+# Recordings
+videos/
